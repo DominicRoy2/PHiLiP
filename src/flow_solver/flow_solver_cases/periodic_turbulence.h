@@ -79,7 +79,17 @@ public:
             const double current_time) const;
 
     /// Calculate numerical entropy by matrix-vector product
-    double get_numerical_entropy(const std::shared_ptr <DGBase<dim, double>> dg) const;
+    double compute_current_integrated_numerical_entropy(
+            const std::shared_ptr <DGBase<dim, double>> dg) const;
+
+    /// Update numerical entropy variables
+    void update_numerical_entropy(
+            const double FR_entropy_contribution_RRK_solver,
+            const unsigned int current_iteration,
+            const std::shared_ptr <DGBase<dim, double>> dg);
+    
+    /// Retrieves cumulative_numerical_entropy_change_FRcorrected
+    double get_numerical_entropy(const std::shared_ptr <DGBase<dim, double>> /*dg*/) const;
 
 protected:
     /// Filename (with extension) for the unsteady data table
@@ -151,6 +161,15 @@ protected:
 
     /// Maximum local wave speed (i.e. convective eigenvalue)
     double maximum_local_wave_speed;
+
+    /// Numerical entropy at previous timestep
+    double previous_numerical_entropy = 0;
+
+    /// Cumulative change in numerical entropy
+    double cumulative_numerical_entropy_change_FRcorrected = 0;
+
+    /// Numerical entropy at initial time
+    double initial_numerical_entropy_abs = 0;
 
     /// Times at which to output the velocity field
     dealii::Table<1,double> output_velocity_field_times;

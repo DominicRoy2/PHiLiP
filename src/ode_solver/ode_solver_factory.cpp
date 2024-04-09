@@ -4,7 +4,8 @@
 #include "runge_kutta_ode_solver.h"
 #include "low_storage_runge_kutta_ode_solver.h"
 #include "implicit_ode_solver.h"
-#include "rrk_explicit_ode_solver.h"
+#include "relaxation_runge_kutta/algebraic_rrk_ode_solver.h"
+#include "relaxation_runge_kutta/root_finding_rrk_ode_solver.h"
 #include "pod_galerkin_ode_solver.h"
 #include "pod_petrov_galerkin_ode_solver.h"
 #include <deal.II/distributed/solution_transfer.h>
@@ -139,16 +140,16 @@ std::shared_ptr<ODESolverBase<dim,real,MeshType>> ODESolverFactory<dim,real,Mesh
         pcout << "Creating Runge Kutta ODE Solver with " 
               << n_rk_stages << " stage(s)..." << std::endl;
         if (n_rk_stages == 1){
-            return std::make_shared<RungeKuttaODESolver<dim,real,1,MeshType>>(dg_input,rk_tableau);
+            return std::make_shared<RungeKuttaODESolver<dim,real,1,MeshType>>(dg_input,rk_tableau,RRK_object);
         }
-        if (n_rk_stages == 2){
-            return std::make_shared<RungeKuttaODESolver<dim,real,2,MeshType>>(dg_input,rk_tableau);
+        else if (n_rk_stages == 2){
+            return std::make_shared<RungeKuttaODESolver<dim,real,2,MeshType>>(dg_input,rk_tableau,RRK_object);
         }
-        if (n_rk_stages == 3){
-            return std::make_shared<RungeKuttaODESolver<dim,real,3,MeshType>>(dg_input,rk_tableau);
+        else if (n_rk_stages == 3){
+            return std::make_shared<RungeKuttaODESolver<dim,real,3,MeshType>>(dg_input,rk_tableau,RRK_object);
         }
-        if (n_rk_stages == 4){
-            return std::make_shared<RungeKuttaODESolver<dim,real,4,MeshType>>(dg_input,rk_tableau);
+        else if (n_rk_stages == 4){
+            return std::make_shared<RungeKuttaODESolver<dim,real,4,MeshType>>(dg_input,rk_tableau,RRK_object);
         }
         else{
             pcout << "Error: invalid number of stages. Aborting..." << std::endl;
@@ -226,6 +227,7 @@ std::shared_ptr<RKTableauBase<dim,real,MeshType>> ODESolverFactory<dim,real,Mesh
 
     if (rk_method == RKMethodEnum::ssprk3_ex)   return std::make_shared<SSPRK3Explicit<dim, real, MeshType>> (n_rk_stages, "3rd order SSP (explicit)");
     if (rk_method == RKMethodEnum::rk4_ex)      return std::make_shared<RK4Explicit<dim, real, MeshType>>    (n_rk_stages, "4th order classical RK (explicit)");
+    if (rk_method == RKMethodEnum::heun2_ex)      return std::make_shared<HeunExplicit<dim, real, MeshType>>    (n_rk_stages, "2nd order Heun's method (explicit)");
     if (rk_method == RKMethodEnum::euler_ex) {
         using ODEEnum = Parameters::ODESolverParam::ODESolverEnum;
         ODEEnum ode_solver_type = dg_input->all_parameters->ode_solver_param.ode_solver_type;
@@ -295,13 +297,16 @@ std::shared_ptr<EmptyRRKBase<dim,real,MeshType>> ODESolverFactory<dim,real,MeshT
         } else{
             pcout << "PDE type has no assigned numerical entropy variable. Aborting..." << std::endl;
             std::abort();
-            return nullptr;
         }
-    }
-    else {
-        pcout << "Error: invalid RK method, or attempted to use implicit RK with dim > 1. Aborting..." << std::endl;
-        std::abort();
-        return nullptr;
+
+        pcout << "Adding " << rrk_type_string << " Relaxation Runge Kutta to the ODE solver..." << std::endl;
+        if (numerical_entropy_type==NumEntropyEnum::energy)
+            return std::make_shared<AlgebraicRRKODESolver<dim,real,MeshType>>(rk_tableau);
+        else if (numerical_entropy_type==NumEntropyEnum::nonlinear)
+            return std::make_shared<RootFindingRRKODESolver<dim,real,MeshType>>(rk_tableau);
+        else return nullptr; // no need for message as numerical_entropy_type has already been checked
+    } else {
+        return std::make_shared<EmptyRRKBase<dim,real,MeshType>> (rk_tableau);
     }
 }
 
