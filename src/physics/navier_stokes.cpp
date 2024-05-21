@@ -886,6 +886,162 @@ void NavierStokes<dim,nstate,real>
     }
 }
 
+template <int dim, int nstate, typename real>
+//template<typename real2>
+dealii::Vector<double> NavierStokes<dim,nstate,real>::post_compute_derived_quantities_vector (
+    const dealii::Vector<double>              &uh,
+    const std::vector<dealii::Tensor<1,dim> > &duh,
+    const std::vector<dealii::Tensor<2,dim> > &dduh,
+    const dealii::Tensor<1,dim>               &normals,
+    const dealii::Point<dim>                  &evaluation_points) const
+{
+    std::vector<std::string> names = post_get_names ();
+    dealii::Vector<double> computed_quantities = PhysicsBase<dim,nstate,real>::post_compute_derived_quantities_vector ( uh, duh, dduh, normals, evaluation_points);
+    unsigned int current_data_index = computed_quantities.size() - 1;
+    computed_quantities.grow_or_shrink(names.size());
+    if constexpr (std::is_same<real,double>::value) {
+
+        std::array<double, nstate> conservative_soln;
+        for (unsigned int s=0; s<nstate; ++s) {
+            conservative_soln[s] = uh(s);
+        }
+        const std::array<double, nstate> primitive_soln = this->template convert_conservative_to_primitive<real>(conservative_soln);
+        // if (primitive_soln[0] < 0) std::cout << evaluation_points << std::endl;
+
+        std::array<dealii::Tensor<1,dim,double>,nstate> conservative_soln_gradient;
+        for (unsigned int s=0; s<nstate; ++s) {
+            for (unsigned int d=0; d<dim; ++d) {
+                conservative_soln_gradient[s][d] = duh[s][d];
+            }
+        }
+
+        // Density
+        computed_quantities(++current_data_index) = primitive_soln[0];
+        // VelocitiesmK
+        for (unsigned int d=0; d<dim; ++d) {
+            computed_quantities(++current_data_index) = primitive_soln[1+d];
+        }
+        // Momentum
+        for (unsigned int d=0; d<dim; ++d) {
+            computed_quantities(++current_data_index) = conservative_soln[1+d];
+        }
+        // Energy
+        computed_quantities(++current_data_index) = conservative_soln[nstate-1];
+        // Pressure
+        computed_quantities(++current_data_index) = primitive_soln[nstate-1];
+        // Pressure coefficient
+        computed_quantities(++current_data_index) = (primitive_soln[nstate-1] - this->pressure_inf) / this->dynamic_pressure_inf;
+        // Temperature
+        computed_quantities(++current_data_index) = this->template compute_temperature<real>(primitive_soln);
+        // Entropy generation
+        computed_quantities(++current_data_index) = this->compute_entropy_measure(conservative_soln) - this->entropy_inf;
+        // Mach Number
+        computed_quantities(++current_data_index) = this->compute_mach_number(conservative_soln);
+        // Viscous stress tensor
+        if constexpr(dim==2) {
+            // Calculate primitive solution gradient
+            const std::array<dealii::Tensor<1,dim,real>,nstate> primitive_soln_gradient = this->template convert_conservative_gradient_to_primitive_gradient<real>(conservative_soln, conservative_soln_gradient);
+            // Viscous stress tensor
+            dealii::Tensor<2,2,double> viscous_stress_tensor = compute_viscous_stress_tensor<real>(primitive_soln,primitive_soln_gradient);
+            //First line of viscous stress tensor
+            for (unsigned int d=0; d<2; ++d) {
+                computed_quantities(++current_data_index) = viscous_stress_tensor[0][d];
+            }
+            //Second line of viscous stress tensor
+            for (unsigned int d=0; d<2; ++d) {
+                computed_quantities(++current_data_index) = viscous_stress_tensor[1][d];
+            }
+        }
+
+    }
+    if (computed_quantities.size()-1 != current_data_index) {
+        std::cout << " Did not assign a value to all the data. Missing " << computed_quantities.size() - current_data_index << " variables."
+                  << " If you added a new output variable, make sure the names and DataComponentInterpretation match the above. "
+                  << std::endl;
+    }
+
+    return computed_quantities;
+}
+
+template <int dim, int nstate, typename real>
+std::vector<dealii::DataComponentInterpretation::DataComponentInterpretation> NavierStokes<dim,nstate,real>
+::post_get_data_component_interpretation () const
+{
+    namespace DCI = dealii::DataComponentInterpretation;
+    std::vector<DCI::DataComponentInterpretation> interpretation = PhysicsBase<dim,nstate,real>::post_get_data_component_interpretation (); // state variables
+    interpretation.push_back (DCI::component_is_scalar); // Density
+    for (unsigned int d=0; d<dim; ++d) {
+        interpretation.push_back (DCI::component_is_part_of_vector); // Velocity
+    }
+    for (unsigned int d=0; d<dim; ++d) {
+        interpretation.push_back (DCI::component_is_part_of_vector); // Momentum
+    }
+    interpretation.push_back (DCI::component_is_scalar); // Energy
+    interpretation.push_back (DCI::component_is_scalar); // Pressure
+    interpretation.push_back (DCI::component_is_scalar); // Pressure coefficient
+    interpretation.push_back (DCI::component_is_scalar); // Temperature
+    interpretation.push_back (DCI::component_is_scalar); // Entropy generation
+    interpretation.push_back (DCI::component_is_scalar); // Mach number
+    if constexpr(dim==2) {
+        for (unsigned int d=0; d<2; ++d) {
+            interpretation.push_back (DCI::component_is_part_of_vector); // First line of viscous Stress Tensor
+        }
+        for (unsigned int d=0; d<2; ++d) {
+            interpretation.push_back (DCI::component_is_part_of_vector); // Second line of viscous Stress Tensor
+        }
+    }
+
+    std::vector<std::string> names = post_get_names();
+    if (names.size() != interpretation.size()) {
+        std::cout << "Number of DataComponentInterpretation is not the same as number of names for output file" << std::endl;
+    }
+    return interpretation;
+}
+
+
+template <int dim, int nstate, typename real>
+std::vector<std::string> NavierStokes<dim,nstate,real>
+::post_get_names () const
+{
+    std::vector<std::string> names = PhysicsBase<dim,nstate,real>::post_get_names ();
+    names.push_back ("density");
+    for (unsigned int d=0; d<dim; ++d) {
+      names.push_back ("velocity");
+    }
+    for (unsigned int d=0; d<dim; ++d) {
+      names.push_back ("momentum");
+    }
+    names.push_back ("energy");
+    names.push_back ("pressure");
+    names.push_back ("pressure_coeffcient");
+    names.push_back ("temperature");
+
+    names.push_back ("entropy_generation");
+    names.push_back ("mach_number");
+    if constexpr(dim==2) {
+        // First line of viscous Stress Tensor
+        for (unsigned int d=0; d<2; ++d) {
+            names.push_back ("du_viscous_stress_tensor");
+        }
+        // Second line of viscous Stress Tensor
+        for (unsigned int d=0; d<2; ++d) {
+            names.push_back ("dv_viscous_stress_tensor");
+        }
+    }
+    return names;
+}
+
+template <int dim, int nstate, typename real>
+dealii::UpdateFlags NavierStokes<dim,nstate,real>
+::post_get_needed_update_flags () const
+{
+    //return update_values | update_gradients;
+    return dealii::update_values
+           | dealii::update_quadrature_points
+           | dealii::update_gradients
+           ;
+}
+
 // Instantiate explicitly
 template class NavierStokes < PHILIP_DIM, PHILIP_DIM+2, double >;
 template class NavierStokes < PHILIP_DIM, PHILIP_DIM+2, FadType  >;

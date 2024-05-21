@@ -279,6 +279,31 @@ public:
         const dealii::Tensor<1,dim,real2> &vel,
         const dealii::Tensor<2,dim,real2> &viscous_stress_tensor,
         const dealii::Tensor<1,dim,real2> &heat_flux) const;
+    
+    /// Returns current vector solution to be used by PhysicsPostprocessor to output current solution.
+    /** The implementation in this Physics base class simply returns the stored solution.
+     */
+    dealii::Vector<double> post_compute_derived_quantities_vector (
+        const dealii::Vector<double>              &uh,
+        const std::vector<dealii::Tensor<1,dim> > &duh,
+        const std::vector<dealii::Tensor<2,dim> > &dduh,
+        const dealii::Tensor<1,dim>               &normals,
+        const dealii::Point<dim>                  &evaluation_points) const;
+    
+    /// Returns names of the solution to be used by PhysicsPostprocessor to output current solution.
+    /** The implementation in this Physics base class simply returns "state0, state1, etc.".
+     */
+    std::vector<std::string> post_get_names () const;
+    
+    /// Returns DataComponentInterpretation of the solution to be used by PhysicsPostprocessor to output current solution.
+    /** Treats every solution state as an independent scalar.
+     */
+    std::vector<dealii::DataComponentInterpretation::DataComponentInterpretation> post_get_data_component_interpretation () const;
+    
+    /// Returns required update flags of the solution to be used by PhysicsPostprocessor to output current solution.
+    /** Only update the solution at the output points.
+     */
+    dealii::UpdateFlags post_get_needed_update_flags () const; 
 
 protected:
 
