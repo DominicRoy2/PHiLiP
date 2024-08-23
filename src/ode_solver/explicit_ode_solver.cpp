@@ -116,7 +116,7 @@ void RungeKuttaODESolver<dim,real,n_rk_stages,MeshType>::allocate_ode_system ()
         this->dg->evaluate_mass_matrices(true); // creates and stores global inverse mass matrix
     }
     this->pcout << std::endl;
-
+    
     this->rk_stage.resize(n_rk_stages);
     for (int i=0; i<n_rk_stages; ++i) {
         this->rk_stage[i].reinit(this->dg->locally_owned_dofs, this->dg->ghost_dofs, this->mpi_communicator);
@@ -130,6 +130,7 @@ void RungeKuttaODESolver<dim,real,n_rk_stages,MeshType>::allocate_ode_system ()
               false); 
     for (int i=0; i<n_rk_stages; ++i) {
         if (this->butcher_tableau->get_a(i,i)==0.0)     this->butcher_tableau_aii_is_zero[i] = true;
+    
     }
 }
 

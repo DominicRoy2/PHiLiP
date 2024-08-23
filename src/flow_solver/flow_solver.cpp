@@ -461,9 +461,16 @@ int FlowSolver<dim,nstate>::run() const
         // Initialize time step
         //----------------------------------------------------
         double time_step = 0.0;
-        if(flow_solver_param.adaptive_time_step == true) {
+        if(flow_solver_param.adaptive_time_step == true && flow_solver_param.error_adaptive_time_step == true){
+            pcout << "WARNING: CFL-adaptation and error-adaptation cannot be used at the same time. Aborting!" << std::endl;
+            std::abort();
+        }
+        else if(flow_solver_param.adaptive_time_step == true) {
             pcout << "Setting initial adaptive time step... " << std::flush;
             time_step = flow_solver_case->get_adaptive_time_step_initial(dg);
+        } else if(flow_solver_param.error_adaptive_time_step == true) {
+            pcout << "Setting initial error adaptive time step... " << std::flush;
+            time_step = ode_solver->get_automatic_initial_step_size(time_step,false);
         } else {
             pcout << "Setting constant time step... " << std::flush;
             time_step = flow_solver_case->get_constant_time_step(dg);
@@ -566,11 +573,16 @@ int FlowSolver<dim,nstate>::run() const
                 flow_solver_case->compute_unsteady_data_and_write_to_table(ode_solver->current_iteration, ode_solver->current_time, dg, unsteady_data_table, do_write_unsteady_data_table_file);
             }
             // update next time step
+                       
             if(flow_solver_param.adaptive_time_step == true) {
                 next_time_step = flow_solver_case->get_adaptive_time_step(dg);
+            } else if (flow_solver_param.error_adaptive_time_step == true) {
+                next_time_step = ode_solver->get_automatic_error_adaptive_step_size(time_step,false); 
             } else {
                 next_time_step = flow_solver_case->get_constant_time_step(dg);
             }
+                      
+            
 
 #if PHILIP_DIM>1
             if(flow_solver_param.output_restart_files == true) {
