@@ -234,7 +234,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_and_build_operators(
     const bool                                             compute_auxiliary_right_hand_side,
     const bool /*compute_dRdW*/, const bool /*compute_dRdX*/, const bool /*compute_d2R*/)
 {
-    
+
     const dealii::FESystem<dim> &fe_metric = this->high_order_grid->fe_system;
     const unsigned int n_metric_dofs = fe_metric.dofs_per_cell;
     const unsigned int n_grid_nodes  = n_metric_dofs / dim;
@@ -619,7 +619,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_auxiliary_equati
     AssertDimension (n_dofs, dofs_indices.size());
 
     //const bool face_orientation = this->all_parameters->flow_solver_param.use_gmsh_mesh ? cell->face_orientation(iface) : true;
-    std::vector<bool> face_orientation;
+    std::vector<bool> face_orientation = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation[0] = cell->face_orientation(iface);
         face_orientation[1] = cell->face_rotation(iface);
@@ -795,7 +795,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_auxiliary_equation(
 
     // const bool face_orientation_int = this->all_parameters->flow_solver_param.use_gmsh_mesh ? cell->face_orientation(iface) : true;
     // const bool face_orientation_ext = this->all_parameters->flow_solver_param.use_gmsh_mesh ? neighbor_cell->face_orientation(neighbor_iface) : true;
-    std::vector<bool> face_orientation_int;
+    std::vector<bool> face_orientation_int = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation_int[0] = cell->face_orientation(iface);
         face_orientation_int[1] = cell->face_rotation(iface);
@@ -805,7 +805,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_auxiliary_equation(
         face_orientation_int[1] = false;
         face_orientation_int[2] = false;
     }
-    std::vector<bool> face_orientation_ext;
+    std::vector<bool> face_orientation_ext = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation_ext[0] = neighbor_cell->face_orientation(neighbor_iface);
         face_orientation_ext[1] = neighbor_cell->face_rotation(neighbor_iface);
@@ -1559,7 +1559,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_strong(
     AssertDimension (n_dofs, dof_indices.size());
 
     //const bool face_orientation = this->all_parameters->flow_solver_param.use_gmsh_mesh ? cell->face_orientation(iface) : true;
-    std::vector<bool> face_orientation;
+    std::vector<bool> face_orientation = {true, false, false};;
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation[0] = cell->face_orientation(iface);
         face_orientation[1] = cell->face_rotation(iface);
@@ -2303,7 +2303,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
     // const bool face_orientation_int = this->all_parameters->flow_solver_param.use_gmsh_mesh ? cell->face_orientation(iface) : {true,false,false};
     // const bool face_orientation_ext = this->all_parameters->flow_solver_param.use_gmsh_mesh ? neighbor_cell->face_orientation(neighbor_iface) : {true,false,false};
-    std::vector<bool> face_orientation_int;
+    std::vector<bool> face_orientation_int = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation_int[0] = cell->face_orientation(iface);
         face_orientation_int[1] = cell->face_rotation(iface);
@@ -2313,7 +2313,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         face_orientation_int[1] = false;
         face_orientation_int[2] = false;
     }
-    std::vector<bool> face_orientation_ext;
+    std::vector<bool> face_orientation_ext = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
         face_orientation_ext[0] = neighbor_cell->face_orientation(neighbor_iface);
         face_orientation_ext[1] = neighbor_cell->face_rotation(neighbor_iface);

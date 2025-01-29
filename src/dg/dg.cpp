@@ -2256,6 +2256,32 @@ void DGBase<dim,real,MeshType>::allocate_system (
     time_averaged_solution.reinit(locally_owned_dofs, ghost_dofs, mpi_communicator);
     time_averaged_solution *= 0.0;
 
+    //double current_cell_diameter;
+    double minimum_vertex_distance_cell;
+    //double min_diameter_local = high_order_grid->dof_handler_grid.begin_active()->diameter();
+    dealii::Point<dim> min_diameter_cell_coord;
+    const int iproc = dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
+    const dealii::Point<dim> unit_vertex = dealii::GeometryInfo<dim>::unit_cell_vertex(0);
+
+    for (const auto &cell : high_order_grid->dof_handler_grid.active_cell_iterators())
+    {
+        if(!cell->is_locally_owned())  continue;
+        //current_cell_diameter = cell->diameter(); // For future dealii version: current_cell_diameter = cell->diameter(*(mapping_fe_field));
+        minimum_vertex_distance_cell = cell->minimum_vertex_distance();
+        // if ((min_diameter_local > minimum_vertex_distance_cell) && (cell->is_locally_owned()))
+        // {
+        //     min_diameter_local = minimum_vertex_distance_cell;
+        //     min_diameter_cell_coord = high_order_grid->mapping_fe_field->transform_unit_to_real_cell(cell, unit_vertex);
+        // }
+        if(minimum_vertex_distance_cell < 0.0031){
+            min_diameter_cell_coord = high_order_grid->mapping_fe_field->transform_unit_to_real_cell(cell, unit_vertex);
+            std::cout<<"iproc: "<<iproc<<"\nminimum_vertex_distance_cell: "<<minimum_vertex_distance_cell<<"\nmin_diameter_cell_coord: "<<min_diameter_cell_coord<<"\n"<<std::endl;
+        }
+    }
+
+    //std::cout<<"iproc: "<<iproc<<"\nminimum_vertex_distance_cell: "<<min_diameter_local<<"\nmin_diameter_cell_coord: "<<min_diameter_cell_coord<<"\n"<<std::endl;
+
+
     allocate_dual_vector();
 
     // Set use_auxiliary_eq flag

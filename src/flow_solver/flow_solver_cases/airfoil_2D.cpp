@@ -60,11 +60,19 @@ void Airfoil2D<dim,nstate>::display_additional_flow_case_specific_parameters() c
 template <int dim, int nstate>
 std::shared_ptr<Triangulation> Airfoil2D<dim,nstate>::generate_grid() const
 {
-    std::shared_ptr<dealii::parallel::distributed::Triangulation<2> > grid = std::make_shared<dealii::parallel::distributed::Triangulation<2> > (
-#if PHILIP_DIM!=1
-    this->mpi_communicator
-#endif
+    // if(this->all_param.flow_solver_param.use_gmsh_mesh == true){
+    //     const std::string mesh_filename = this->all_param.flow_solver_param.input_mesh_filename+std::string(".msh");
+    //     const bool use_mesh_smoothing = false;
+    //     std::shared_ptr<HighOrderGrid<2,double,dealii::parallel::distributed::Triangulation<2>,dealii::LinearAlgebra::distributed::Vector<double>,dealii::DoFHandler<2>>> naca0012_mesh = read_gmsh<2, 2> (mesh_filename, this->all_param.do_renumber_dofs, 0, use_mesh_smoothing);
+    //     std::shared_ptr<dealii::parallel::distributed::Triangulation<2> > grid =  naca0012_mesh->triangulation;
+    // }
+    //else{
+        std::shared_ptr<dealii::parallel::distributed::Triangulation<2> > grid = std::make_shared<dealii::parallel::distributed::Triangulation<2> > (
+    #if PHILIP_DIM!=1
+        this->mpi_communicator
+    #endif
     );
+    //}
     // dealii::GridGenerator::Airfoil::AdditionalData airfoil_data;
     // airfoil_data.airfoil_type = "NACA";
     // airfoil_data.naca_id      = "0012";
