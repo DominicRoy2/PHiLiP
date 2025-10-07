@@ -88,6 +88,9 @@ protected:
 
     dealii::Tensor<2,dim,double> zero_tensor; ///< Tensor of zeros
 
+    /// Pointer to Navier-Stokes physics object for computing things on the fly
+    std::shared_ptr< Physics::NavierStokes_ChannelFlowConstantSourceTerm_WallModel<dim,dim+2,double> > navier_stokes_channel_flow_constant_source_term_wall_model_physics;
+
 public:
     /// Function to compute the adaptive time step
     double get_adaptive_time_step(std::shared_ptr<DGBase<dim,double>> dg) const override;
@@ -103,8 +106,14 @@ public:
             const std::shared_ptr<dealii::TableHandler> unsteady_data_table,
             const bool do_write_unsteady_data_table_file) override;
 
+    /// Get the number of degrees of freedom per state from a given poly degree
+    unsigned int get_number_of_degrees_of_freedom_per_state_from_poly_degree(const unsigned int poly_degree_input) const override;
+
     /// Get the average wall shear stress
     double get_average_wall_shear_stress(DGBase<dim, double> &dg) const;
+
+    /// Get the average wall shear stress from wall model
+    double get_average_wall_shear_stress_from_wall_model(DGBase<dim, double> &dg) const;
 
     double get_bulk_density() const; ///< Getter for the bulk density
     double get_bulk_velocity() const; ///< Getter for the bulk velocity

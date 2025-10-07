@@ -238,6 +238,8 @@ void AllParameters::declare_parameters (dealii::ParameterHandler &prm)
                       " euler |"
                       " mhd |"
                       " navier_stokes |"
+                      " navier_stokes_channel_flow_constant_source_term | "
+                      " navier_stokes_channel_flow_constant_source_term_wall_model | "
                       " physics_model_filtered |"
                       " physics_model"),
                       "The PDE we want to solve. "
@@ -252,6 +254,8 @@ void AllParameters::declare_parameters (dealii::ParameterHandler &prm)
                       "  euler | "
                       "  mhd |"
                       "  navier_stokes |"
+                      "  navier_stokes_channel_flow_constant_source_term | "
+                      "  navier_stokes_channel_flow_constant_source_term_wall_model | "
                       "  physics_model_filtered |"
                       "  physics_model>.");
 
@@ -321,6 +325,10 @@ void AllParameters::declare_parameters (dealii::ParameterHandler &prm)
                       dealii::Patterns::Double(0, dealii::Patterns::Double::max_double_value),
                       "Tolerance for checking that the determinant of surface jacobians at element faces matches. "
                       "Note: Currently only used in weak dg.");
+
+    prm.declare_entry("wall_model_input_from_second_element", "false",// TO DO: change to true for final PR
+                      dealii::Patterns::Bool(),
+                      "Flag for using second element as wall model input. If false, uses buffer (i.e. wall-adjacent) element.");
 
     Parameters::LinearSolverParam::declare_parameters (prm);
     Parameters::ManufacturedConvergenceStudyParam::declare_parameters (prm);
@@ -436,6 +444,15 @@ void AllParameters::parse_parameters (dealii::ParameterHandler &prm)
         pde_type = navier_stokes;
         nstate = dimension+2;
     }
+    else if (pde_string == "navier_stokes_channel_flow_constant_source_term") {
+        pde_type = navier_stokes_channel_flow_constant_source_term;
+        nstate = dimension+2; 
+    }
+    else if (pde_string == "navier_stokes_channel_flow_constant_source_term_wall_model") {
+        pde_type = navier_stokes_channel_flow_constant_source_term_wall_model;
+        nstate = dimension+2; 
+        using_wall_model = true;
+    }
     else if (pde_string == "physics_model") {
         pde_type = physics_model;
         if (model_type == large_eddy_simulation || model_type == navier_stokes_model) {
@@ -534,7 +551,9 @@ void AllParameters::parse_parameters (dealii::ParameterHandler &prm)
     const std::string renumber_dofs_type_string = prm.get("renumber_dofs_type");
     if (renumber_dofs_type_string == "CuthillMckee") { renumber_dofs_type = RenumberDofsType::CuthillMckee; }
 
-    matching_surface_jac_det_tolerance = prm.get_double("matching_surface_jac_det_tolerance");
+    wall_model_input_from_second_element = prm.get_bool("wall_model_input_from_second_element");
+
+    output_high_order_grid = prm.get_bool("output_high_order_grid");
 
     pcout << "Parsing linear solver subsection..." << std::endl;
     linear_solver_param.parse_parameters (prm);

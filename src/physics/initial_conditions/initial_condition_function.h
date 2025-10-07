@@ -95,7 +95,7 @@ protected:
     /// x-velocity
     virtual real x_velocity (const dealii::Point<dim,real> &point, const real density, const real temperature) const;
     /// y-velocity
-    real y_velocity (const dealii::Point<dim,real> &point) const;
+    virtual real y_velocity (const dealii::Point<dim,real> &point) const;
 };
 
 template <int dim, int nstate, typename real>
@@ -119,7 +119,7 @@ protected:
 };
 
 template <int dim, int nstate, typename real>
-class InitialConditionFunction_TurbulentChannelFlow_Manufactured : public InitialConditionFunction_TurbulentChannelFlow<dim,nstate,real>
+class InitialConditionFunction_TurbulentChannelFlow_Manufactured : public InitialConditionFunction_TurbulentChannelFlow_Turbulent<dim,nstate,real>
 {
 public:
     /// Constructor.
@@ -133,17 +133,44 @@ public:
         const double domain_length_z_);
 
 protected:
-    /// x-velocity
-    real x_velocity (const dealii::Point<dim,real> &point, const real density, const real temperature) const override;
+    /// y-velocity
+    real y_velocity (const dealii::Point<dim,real> &point) const override;
 };
 
-/// Initial Condition Function: Taylor Green Vortex (uniform density)
+/// Initial Condition Function: NavierStokesBase
 template <int dim, int nstate, typename real>
-class InitialConditionFunction_TaylorGreenVortex : public InitialConditionFunction<dim,nstate,real>
+class InitialConditionFunction_NavierStokesBase : public InitialConditionFunction<dim,nstate,real>
 {
 protected:
     using dealii::Function<dim,real>::value; ///< dealii::Function we are templating on
 
+public:
+    /// Constructor for NavierStokesBase
+    InitialConditionFunction_NavierStokesBase (
+            Parameters::AllParameters const *const param);
+
+    const double gamma_gas; ///< Constant heat capacity ratio of fluid.
+    const double mach_inf; ///< Farfield Mach number.
+    const double mach_inf_sqr; ///< Farfield Mach number squared.
+        
+    /// Value of initial condition expressed in terms of conservative variables
+    real value (const dealii::Point<dim,real> &point, const unsigned int istate = 0) const override;
+
+protected:
+    /// Value of initial condition expressed in terms of primitive variables
+    virtual real primitive_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const = 0;
+    
+    /// Converts value from: primitive to conservative
+    real convert_primitive_to_conversative_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const;
+
+    // Euler physics pointer. Used to convert primitive to conservative.
+    std::shared_ptr < Physics::Euler<dim, nstate, double > > euler_physics;
+};
+
+/// Initial Condition Function: Taylor Green Vortex (uniform density)
+template <int dim, int nstate, typename real>
+class InitialConditionFunction_TaylorGreenVortex : public InitialConditionFunction_NavierStokesBase<dim,nstate,real>
+{
 public:
     /// Constructor for TaylorGreenVortex_InitialCondition with uniform density
     /** Calls the Function(const unsigned int n_components) constructor in deal.II
@@ -156,22 +183,9 @@ public:
     InitialConditionFunction_TaylorGreenVortex (
             Parameters::AllParameters const *const param);
 
-    const double gamma_gas; ///< Constant heat capacity ratio of fluid.
-    const double mach_inf; ///< Farfield Mach number.
-    const double mach_inf_sqr; ///< Farfield Mach number squared.
-        
-    /// Value of initial condition expressed in terms of conservative variables
-    real value (const dealii::Point<dim,real> &point, const unsigned int istate = 0) const override;
-
 protected:
     /// Value of initial condition expressed in terms of primitive variables
-    real primitive_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const;
-    
-    /// Converts value from: primitive to conservative
-    real convert_primitive_to_conversative_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const;
-
-    // Euler physics pointer. Used to convert primitive to conservative.
-    std::shared_ptr < Physics::Euler<dim, nstate, double > > euler_physics;
+    real primitive_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const override;
 
     /// Value of initial condition for density
     virtual real density(const dealii::Point<dim,real> &point) const;
@@ -199,6 +213,68 @@ public:
 protected:
     /// Value of initial condition for density
     real density(const dealii::Point<dim,real> &point) const override;
+};
+
+/// Initial Condition Function: Dipole Wall Collision
+template <int dim, int nstate, typename real>
+class InitialConditionFunction_DipoleWallCollision : public InitialConditionFunction_NavierStokesBase<dim,nstate,real>
+{
+public:
+    /// Constructor
+    /** Calls the Function(const unsigned int n_components) constructor in deal.II
+     *  This sets the public attribute n_components = nstate, which can then be accessed
+     *  by all the other functions
+     *  Reference: 
+     *  These initial conditions are given in nondimensional form (free-stream as reference)
+     */
+    InitialConditionFunction_DipoleWallCollision (
+            Parameters::AllParameters const *const param,
+            const real extremum_vorticity_value_,
+            const real dipole_radius,
+            const real dipole_axis_angle_wrt_x_axis_in_degrees);
+
+    const real extremum_vorticity_value; // Extremum vorticity value
+    const real r0; // dipole radius
+    const real x1; // x-coordinate of dipole 1
+    const real y1; // y-coordinate of dipole 1
+    const real x2; // x-coordinate of dipole 2
+    const real y2; // y-coordinate of dipole 2
+
+protected:
+    /// Value of initial condition expressed in terms of primitive variables
+    real primitive_value(const dealii::Point<dim,real> &point, const unsigned int istate = 0) const override;
+};
+
+/// Initial Condition Function: Dipole Wall Collision Normal
+template <int dim, int nstate, typename real>
+class InitialConditionFunction_DipoleWallCollision_Normal : public InitialConditionFunction_DipoleWallCollision<dim,nstate,real>
+{
+public:
+    /// Constructor
+    /** Calls the Function(const unsigned int n_components) constructor in deal.II
+     *  This sets the public attribute n_components = nstate, which can then be accessed
+     *  by all the other functions
+     *  Reference: 
+     *  These initial conditions are given in nondimensional form (free-stream as reference)
+     */
+    InitialConditionFunction_DipoleWallCollision_Normal (
+            Parameters::AllParameters const *const param);
+};
+
+/// Initial Condition Function: Dipole Wall Collision Oblique
+template <int dim, int nstate, typename real>
+class InitialConditionFunction_DipoleWallCollision_Oblique : public InitialConditionFunction_DipoleWallCollision<dim,nstate,real>
+{
+public:
+    /// Constructor
+    /** Calls the Function(const unsigned int n_components) constructor in deal.II
+     *  This sets the public attribute n_components = nstate, which can then be accessed
+     *  by all the other functions
+     *  Reference: 
+     *  These initial conditions are given in nondimensional form (free-stream as reference)
+     */
+    InitialConditionFunction_DipoleWallCollision_Oblique (
+            Parameters::AllParameters const *const param);
 };
 
 /// Initial Condition Function: 1D Burgers Rewienski

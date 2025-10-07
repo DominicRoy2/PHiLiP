@@ -18,7 +18,7 @@ set flux_reconstruction_aux = kDG
 set use_inverse_mass_on_the_fly = true
  
 # PDE
-set pde_type = navier_stokes_channel_flow_constant_source_term
+set pde_type = navier_stokes_channel_flow_constant_source_term_wall_model
  
 # numerical fluxes
 set two_point_num_flux_type = IR
@@ -79,7 +79,7 @@ end
 # Flow Solver
 subsection flow_solver
   set flow_case_type = channel_flow
-  set poly_degree = 3
+  set poly_degree = 4
   set final_time = 0.0
   set constant_time_step = 0.000068
   set courant_friedrichs_lewy_number = 0.1
@@ -93,14 +93,14 @@ subsection flow_solver
     set grid_degree = 1
   end
   subsection channel_flow
-    set channel_friction_velocity_reynolds_number = 395
+    set channel_friction_velocity_reynolds_number = 5200
     set turbulent_channel_number_of_cells_x_direction = 4
-    set turbulent_channel_number_of_cells_y_direction = 256
+    set turbulent_channel_number_of_cells_y_direction = 10
     set turbulent_channel_number_of_cells_z_direction = 4
     set turbulent_channel_domain_length_x_direction = 6.283185307179586476
     set turbulent_channel_domain_length_y_direction = 2.0
     set turbulent_channel_domain_length_z_direction = 3.141592653589793238
-    set turbulent_channel_mesh_stretching_function_type = carton_de_wiart_et_al
+    set turbulent_channel_mesh_stretching_function_type = uniform_mesh_no_stretching
     set xvelocity_initial_condition_type = manufactured
   end
   set apply_initial_condition_method = project_initial_condition_function

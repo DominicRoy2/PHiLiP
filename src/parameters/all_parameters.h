@@ -214,6 +214,8 @@ public:
         euler,
         mhd,
         navier_stokes,
+        navier_stokes_channel_flow_constant_source_term,
+        navier_stokes_channel_flow_constant_source_term_wall_model,
         physics_model,
         physics_model_filtered,
     };
@@ -294,6 +296,12 @@ public:
     /** Tolerance for checking that the determinant of surface jacobians at element faces matches.
      *  Note: Currently only used in weak dg. */
     double matching_surface_jac_det_tolerance;
+
+    /// Flag for using wall model (initialized as false)
+    bool using_wall_model = false;
+
+    /// Flag for using second element as wall model input; if false, uses buffer (i.e. wall-adjacent) element
+    bool wall_model_input_from_second_element;
     
     /// Declare parameters that can be set as inputs and set up the default options
     /** This subroutine should call the sub-parameter classes static declare_parameters()

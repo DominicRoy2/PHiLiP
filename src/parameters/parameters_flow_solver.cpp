@@ -28,6 +28,8 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
                           " channel_flow | "
                           " isentropic_vortex | "
                           " kelvin_helmholtz_instability | "
+                          " dipole_wall_collision_normal | "
+                          " dipole_wall_collision_oblique | "
                           " non_periodic_cube_flow | "
                           " sshock | "
                           " wall_distance_evaluation | "
@@ -49,12 +51,9 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
                           " channel_flow | "
                           " isentropic_vortex | "
                           " kelvin_helmholtz_instability | "
-                          " non_periodic_cube_flow>. | "
-                          " sshock | "
-                          " wall_distance_evaluation | "
-                          " flat_plate_2D | "
-                          " airfoil_2D | "
-                          " turbulent_airfoil_3D ");
+                          " dipole_wall_collision_normal | "
+                          " dipole_wall_collision_oblique | "
+                          " non_periodic_cube_flow>. ");
 
         prm.declare_entry("poly_degree", "1",
                           dealii::Patterns::Integer(0, dealii::Patterns::Integer::max_int_value),
@@ -389,11 +388,13 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
                               dealii::Patterns::Selection(
                               " gullbrand | "
                               " carton_de_wiart_et_al | "
+                              " uniform_mesh_no_stretching | "
                               " hopw "),
                               "The type of mesh stretching function for channel flow case. "
                               "Choices are "
                               " <gullbrand | "
                               " carton_de_wiart_et_al | "
+                              " uniform_mesh_no_stretching | "
                               " hopw>.");
             prm.declare_entry("xvelocity_initial_condition_type", "laminar",
                               dealii::Patterns::Selection(
@@ -408,6 +409,17 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
             prm.declare_entry("relaxation_coefficient_for_turbulent_channel_flow_source_term", "0.0",
                               dealii::Patterns::Double(-dealii::Patterns::Double::max_double_value, dealii::Patterns::Double::max_double_value),
                               "Relaxation coefficient for the turbulent channel flow source term. Default is 0.");
+        }
+        prm.leave_subsection();
+
+        prm.enter_subsection("dipole_wall_collision");
+        {
+            prm.declare_entry("do_use_stretched_mesh", "false",
+                              dealii::Patterns::Bool(),
+                              "Flag to use stretched mesh. By default, false (i.e. use uniform mesh).");
+            prm.declare_entry("do_compute_angular_momentum", "false",
+                              dealii::Patterns::Bool(),
+                              "Flag to compute the angular momentum. By default, false.");
         }
         prm.leave_subsection();
 
@@ -456,25 +468,18 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
             prm.declare_entry("output_density_field_in_addition_to_velocity", "false",
                               dealii::Patterns::Bool(),
                               "Output density field in addition to velocity field. False by default.");
+
             prm.declare_entry("output_viscosity_field_in_addition_to_velocity", "false",
                               dealii::Patterns::Bool(),
                               "Output viscosity field in addition to velocity field. False by default.");
 
-            prm.declare_entry("do_compute_time_averaged_solution", "false",
-                              dealii::Patterns::Bool(),
-                              "Compute time averaged solution on the fly (for example, to get velocity fluctuations). False by default.");
-            prm.declare_entry("time_to_start_averaging", "0.0",
-                              dealii::Patterns::Double(0, dealii::Patterns::Double::max_double_value),
-                              "Time after which the time avering of the solution starts. 0.0 default.");
-            prm.declare_entry("do_compute_Reynolds_stress", "false",
-                              dealii::Patterns::Bool(),
-                              "Compute time averaged solution on the fly (for example, to get velocity fluctuations). False by default.");
-            prm.declare_entry("time_to_start_computing_Reynolds_stress", "0.0",
-                              dealii::Patterns::Double(0, dealii::Patterns::Double::max_double_value),
-                              "Time after which the time avering of the solution starts. 0.0 default.");            
             prm.declare_entry("output_flow_field_files_directory_name", ".",
                               dealii::Patterns::FileName(dealii::Patterns::FileName::FileType::input),
                               "Name of directory for writing flow field files. Current directory by default.");
+
+            prm.declare_entry("output_velocity_number_of_subvisions","2",
+                              dealii::Patterns::Integer(1, dealii::Patterns::Integer::max_int_value),
+                              "Number of subdivisions to apply when writting the velocity field at equidistant nodes.");
         }
         prm.leave_subsection();
 
@@ -516,6 +521,10 @@ void FlowSolverParam::parse_parameters(dealii::ParameterHandler &prm)
         else if (flow_case_type_string == "flat_plate_2D")              {flow_case_type = flat_plate_2D;}
         else if (flow_case_type_string == "airfoil_2D")                 {flow_case_type = airfoil_2D;}
         else if (flow_case_type_string == "turbulent_airfoil_3D")                   {flow_case_type = turbulent_airfoil_3D;}
+        else if (flow_case_type_string == "dipole_wall_collision_normal")     
+                                                                        {flow_case_type = dipole_wall_collision_normal;}
+        else if (flow_case_type_string == "dipole_wall_collision_oblique")
+                                                                        {flow_case_type = dipole_wall_collision_oblique;}
 
         poly_degree = prm.get_integer("poly_degree");
         
@@ -636,11 +645,20 @@ void FlowSolverParam::parse_parameters(dealii::ParameterHandler &prm)
             if      (turbulent_channel_mesh_stretching_function_type_string == "gullbrand")             {turbulent_channel_mesh_stretching_function_type = gullbrand;}
             else if (turbulent_channel_mesh_stretching_function_type_string == "hopw")                  {turbulent_channel_mesh_stretching_function_type = hopw;}
             else if (turbulent_channel_mesh_stretching_function_type_string == "carton_de_wiart_et_al") {turbulent_channel_mesh_stretching_function_type = carton_de_wiart_et_al;}
+            else if (turbulent_channel_mesh_stretching_function_type_string == "uniform_mesh_no_stretching") 
+                                                                                                        {turbulent_channel_mesh_stretching_function_type = uniform_mesh_no_stretching;}
             const std::string xvelocity_initial_condition_type_string = prm.get("xvelocity_initial_condition_type");
             if      (xvelocity_initial_condition_type_string == "laminar")      {xvelocity_initial_condition_type = laminar;}
             else if (xvelocity_initial_condition_type_string == "turbulent")    {xvelocity_initial_condition_type = turbulent;}
             else if (xvelocity_initial_condition_type_string == "manufactured") {xvelocity_initial_condition_type = manufactured;}
             relaxation_coefficient_for_turbulent_channel_flow_source_term = prm.get_double("relaxation_coefficient_for_turbulent_channel_flow_source_term");
+        }
+        prm.leave_subsection();
+
+        prm.enter_subsection("dipole_wall_collision");
+        {
+            do_use_stretched_mesh = prm.get_bool("do_use_stretched_mesh");
+            do_compute_angular_momentum = prm.get_bool("do_compute_angular_momentum");
         }
         prm.leave_subsection();
 
@@ -665,11 +683,8 @@ void FlowSolverParam::parse_parameters(dealii::ParameterHandler &prm)
           output_vorticity_magnitude_field_in_addition_to_velocity = prm.get_bool("output_vorticity_magnitude_field_in_addition_to_velocity");
           output_density_field_in_addition_to_velocity = prm.get_bool("output_density_field_in_addition_to_velocity");
           output_viscosity_field_in_addition_to_velocity = prm.get_bool("output_viscosity_field_in_addition_to_velocity");
-          do_compute_time_averaged_solution = prm.get_bool("do_compute_time_averaged_solution");
-          time_to_start_averaging = prm.get_double("time_to_start_averaging");
-          do_compute_Reynolds_stress = prm.get_bool("do_compute_Reynolds_stress");
-          time_to_start_computing_Reynolds_stress = prm.get_double("time_to_start_computing_Reynolds_stress");
           output_flow_field_files_directory_name = prm.get("output_flow_field_files_directory_name");
+          output_velocity_number_of_subvisions = prm.get_integer("output_velocity_number_of_subvisions");
         }
         prm.leave_subsection();
 

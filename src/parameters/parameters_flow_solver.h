@@ -29,6 +29,8 @@ public:
         channel_flow,
         isentropic_vortex,
         kelvin_helmholtz_instability,
+        dipole_wall_collision_normal,
+        dipole_wall_collision_oblique,
         non_periodic_cube_flow,
         sshock,
         wall_distance_evaluation,
@@ -160,10 +162,17 @@ public:
         gullbrand,
         hopw,
         carton_de_wiart_et_al,
+        uniform_mesh_no_stretching,
         };
     /// Selected DensityInitialConditionType from the input file
     TurbulentChannelMeshStretchingFunctionType turbulent_channel_mesh_stretching_function_type;
 
+    /// For dipole wall collision, flag to use stretched mesh
+    bool do_use_stretched_mesh;
+
+    /// For dipole wall collision, flag to compute angular momentum
+    bool do_compute_angular_momentum;
+    
     /// For KHI, the atwood number
     double atwood_number;
 
@@ -186,12 +195,9 @@ public:
     unsigned int number_of_times_to_output_velocity_field; ///< Number of fixed times to output the velocity field
     bool output_vorticity_magnitude_field_in_addition_to_velocity; ///< Flag for outputting vorticity magnitude field in addition to velocity field
     bool output_density_field_in_addition_to_velocity; ///< Flag for outputting density field in addition to velocity field
-    bool output_viscosity_field_in_addition_to_velocity; ///< Flag for outputting viscosity field in addition to velocity field 
-    bool do_compute_time_averaged_solution; ///< Flag for computing time-averaged solution
-    double time_to_start_averaging; ///< Flag for starting time-averaged solution
-    bool do_compute_Reynolds_stress; ///< Flag for computing time-averaged Reynolds stresses
-    double time_to_start_computing_Reynolds_stress; ///< Flag for starting to compute Reynolds stresses. This needs to be after the time-averaging has started.      
+    bool output_viscosity_field_in_addition_to_velocity; ///< Flag for outputting viscosity field in addition to velocity field
     std::string output_flow_field_files_directory_name; ///< Name of directory for writing flow field files
+    unsigned int output_velocity_number_of_subvisions; ///< Number of subdivisions to apply when writting the velocity field at equidistant nodes
 
     bool end_exactly_at_final_time; ///< Flag to adjust the last timestep such that the simulation ends exactly at final_time
     bool do_compute_unsteady_data_and_write_to_table;///< Flag for computing unsteady data and writting to table
