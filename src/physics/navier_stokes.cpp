@@ -1752,7 +1752,7 @@ NavierStokes_ChannelFlowConstantSourceTerm_WallModel<dim, nstate, real>::NavierS
                              manufactured_solution_function,
                              two_point_num_flux_type)
     , distance_from_wall_for_wall_model_input_velocity(distance_from_wall_for_wall_model_input_velocity)
-    , wall_model_look_up_table(std::unique_ptr<WallModelLookUpTable<real>>())
+    , wall_model_look_up_table(std::unique_ptr<WallModel<real>>())
 {
     static_assert(nstate==dim+2, "Physics::NavierStokes_ChannelFlowConstantSourceTerm_WallModel() should be created with nstate=dim+2");
     // Nothing to do here so far
@@ -1782,7 +1782,7 @@ template <int dim, int nstate, typename real>
 std::array<real,nstate> NavierStokes_ChannelFlowConstantSourceTerm_WallModel<dim,nstate,real>
 ::dissipative_flux_dot_normal_on_adiabatic_boundary (
         const std::array<real,nstate> &solution,
-        const std::array<dealii::Tensor<1,dim,real>,nstate> &/*solution_gradient*/,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> & solution_gradient,
         const std::array<real,nstate> &/*filtered_solution*/,
         const std::array<dealii::Tensor<1,dim,real>,nstate> &/*filtered_solution_gradient*/,
         const dealii::types::global_dof_index /*cell_index*/,
@@ -1809,13 +1809,15 @@ std::array<real,nstate> NavierStokes_ChannelFlowConstantSourceTerm_WallModel<dim
     const std::array<real, nstate> primitive_soln = this->template convert_conservative_to_primitive_templated<real>(solution);
     const real viscosity_coefficient = this->template compute_viscosity_coefficient<real>(primitive_soln);
     const real density = solution[0];
+    const real wall_shear_stress_magnitude_initial_guess = this->compute_wall_shear_stress (solution, solution_gradient, normal);
     const real wall_shear_stress_magnitude =
             this->wall_model_look_up_table->get_wall_shear_stress_magnitude(
                     velocity_parallel_to_wall,
                     this->distance_from_wall_for_wall_model_input_velocity,
                     viscosity_coefficient,
                     density,
-                    this->reynolds_number_inf);
+                    this->reynolds_number_inf,
+                    wall_shear_stress_magnitude_initial_guess);
 
     // Compute the dissipative flux dot normal vector; Frere thesis eq.(2.39)
     std::array<real,nstate> dissipative_flux_dot_normal;    
@@ -1827,29 +1829,135 @@ std::array<real,nstate> NavierStokes_ChannelFlowConstantSourceTerm_WallModel<dim
 }
 
 template <typename real>
-WallModelLookUpTable<real>::WallModelLookUpTable()
+WallModel<real>::WallModel()
 { 
     // Do nothing
 }
 
 template <typename real>
-real WallModelLookUpTable<real>::
+real WallModel<real>::
 get_wall_shear_stress_magnitude(
     const real wall_parallel_velocity, 
     const real distance, 
     const real viscosity_coefficient,
     const real density,
-    const double reynolds_number_inf) const
+    const double reynolds_number_inf,
+    const real wall_shear_stress_magnitude_initial_guess) const
 {
     const real u_parallel_plus_y_plus = reynolds_number_inf*density*distance*wall_parallel_velocity/viscosity_coefficient;
-    const real y_plus = this->interpolate(u_parallel_plus_y_plus,true);
+    real y_plus = 0;
+
+    std::string wall_model_type = "Lookup_Table";
+
+    if(wall_model_type == "Lookup_Table"){
+        y_plus = this->interpolate(u_parallel_plus_y_plus,true);
+    }
+    else if(wall_model_type == "Reichardt"){
+        const real wall_friction_velocity_initial_guess = sqrt(wall_shear_stress_magnitude_initial_guess/density);
+        const real y_plus_initial_guess = wall_friction_velocity_initial_guess*(density*distance*reynolds_number_inf)/viscosity_coefficient;
+        y_plus = this->Reichardt_law_solver(u_parallel_plus_y_plus, y_plus_initial_guess);
+    }
+    else if(wall_model_type == "Spalding"){
+        const real wall_friction_velocity_initial_guess = sqrt(wall_shear_stress_magnitude_initial_guess/density);
+        const real u_plus_initial_guess = wall_parallel_velocity/wall_friction_velocity_initial_guess;
+        y_plus = u_parallel_plus_y_plus/this->Spalding_law_solver(u_parallel_plus_y_plus, u_plus_initial_guess);
+    }
+
     const real wall_friction_velocity = y_plus*viscosity_coefficient/(density*distance*reynolds_number_inf);
     const real wall_shear_stress = density*wall_friction_velocity*wall_friction_velocity;
     return wall_shear_stress;
 }
 
 template <typename real>
-real WallModelLookUpTable<real>::
+real WallModel<real>::Reichardt_law_multiplied(const real y_plus, const real kappa, const real A, const real B, const real C) const
+{
+    real logTerm = (1.0 / kappa) * log(1.0 + kappa * y_plus);
+    //real expTerm = A * (1.0 - exp(-y_plus / B) - (y_plus / B) * exp(-C * y_plus / B));
+    real expTerm = (C - (1.0 / kappa)*log(kappa)) * (1.0 - exp(-y_plus / B) - (y_plus / B) * exp(-y_plus / A));
+    return y_plus * (logTerm + expTerm);
+}
+
+template <typename real>
+real WallModel<real>::Reichardt_law_solver(const real u_plus_times_y_plus, const real y_plus_initial_guess, const real tol, const int max_iter) const
+{
+    // Constants
+    const real kappa = 0.38;//0.41;
+    const real A     = 3.0;//7.8;
+    const real B     = 11.0;
+    const real C     = 4.1;//3.0;
+
+    // Initial guess
+    real y_plus = y_plus_initial_guess;
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+        real f = Reichardt_law_multiplied(y_plus, kappa, A, B, C) - u_plus_times_y_plus;
+
+        // Numerical derivative (central difference)
+        real h = 1e-6;
+        real f1 = Reichardt_law_multiplied(y_plus + h, kappa, A, B, C);
+        real f2 = Reichardt_law_multiplied(y_plus - h, kappa, A, B, C);
+        real df = (f1 - f2) / (2 * h);
+
+        if (abs(df) < 1e-12) {
+            throw std::runtime_error("Derivative too small. Newton-Raphson method failed when trying to compute Wall Shear stress.");
+        }
+
+        real y_plus_new = y_plus - f / df;
+
+        if (abs(y_plus_new - y_plus) < tol) {
+            return y_plus_new;
+        }
+
+        y_plus = y_plus_new;
+    }
+
+    throw std::runtime_error("Newton-Raphson did not converge.");
+}
+
+template <typename real>
+real WallModel<real>::Spalding_law_multiplied(const real u_plus, const real kappa, const real C) const
+{
+    real expTerm = u_plus + exp(-kappa * C)*(exp(kappa*u_plus) - (pow(kappa*u_plus,0)/1 + pow(kappa*u_plus,1)/1 + pow(kappa*u_plus,2)/2+ pow(kappa*u_plus,3)/6+pow(kappa*u_plus,4)/24));
+    return u_plus * (expTerm);
+}
+
+template <typename real>
+real WallModel<real>::Spalding_law_solver(const real u_plus_times_y_plus, const real u_plus_initial_guess, const real tol, const int max_iter) const
+{
+    // Constants
+    const real kappa = 0.38;//0.41;
+    const real C     = 4.1;//3.0;
+
+    // Initial guess
+    real u_plus = u_plus_initial_guess;
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+        real f = Spalding_law_multiplied(u_plus, kappa, C) - u_plus_times_y_plus;
+
+        // Numerical derivative (central difference)
+        real h = 1e-6;
+        real f1 = Spalding_law_multiplied(u_plus + h, kappa, C);
+        real f2 = Spalding_law_multiplied(u_plus - h, kappa, C);
+        real df = (f1 - f2) / (2 * h);
+
+        if (abs(df) < 1e-12) {
+            throw std::runtime_error("Derivative too small. Newton-Raphson method failed when trying to compute Wall Shear stress.");
+        }
+
+        real u_plus_new = u_plus - f / df;
+
+        if (abs(u_plus_new - u_plus) < tol) {
+            return u_plus_new;
+        }
+
+        u_plus = u_plus_new;
+    }
+
+    throw std::runtime_error("Newton-Raphson did not converge.");
+}
+
+template <typename real>
+real WallModel<real>::
 interpolate(const real x, const bool extrapolate) const
 {
    int i = 0; // find left end of interval for interpolation
@@ -1889,11 +1997,11 @@ template class NavierStokes_ChannelFlowConstantSourceTerm_WallModel < PHILIP_DIM
 template class NavierStokes_ChannelFlowConstantSourceTerm_WallModel < PHILIP_DIM, PHILIP_DIM+2, RadType  >;
 template class NavierStokes_ChannelFlowConstantSourceTerm_WallModel < PHILIP_DIM, PHILIP_DIM+2, FadFadType >;
 template class NavierStokes_ChannelFlowConstantSourceTerm_WallModel < PHILIP_DIM, PHILIP_DIM+2, RadFadType >;
-template class WallModelLookUpTable<double>;
-template class WallModelLookUpTable<FadType>;
-template class WallModelLookUpTable<RadType>;
-template class WallModelLookUpTable<FadFadType>;
-template class WallModelLookUpTable<RadFadType>;
+template class WallModel<double>;
+template class WallModel<FadType>;
+template class WallModel<RadType>;
+template class WallModel<FadFadType>;
+template class WallModel<RadFadType>;
 //==============================================================================
 // -> Templated member functions:
 //------------------------------------------------------------------------------

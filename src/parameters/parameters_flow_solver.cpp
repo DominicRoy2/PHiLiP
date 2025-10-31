@@ -472,7 +472,22 @@ void FlowSolverParam::declare_parameters(dealii::ParameterHandler &prm)
             prm.declare_entry("output_viscosity_field_in_addition_to_velocity", "false",
                               dealii::Patterns::Bool(),
                               "Output viscosity field in addition to velocity field. False by default.");
-
+            
+                              prm.declare_entry("do_compute_time_averaged_solution", "false",
+                              dealii::Patterns::Bool(),
+                              "Compute time averaged solution on the fly (for example, to get velocity fluctuations). False by default.");
+            prm.declare_entry("time_to_start_averaging", "0.0",
+                              dealii::Patterns::Double(0, dealii::Patterns::Double::max_double_value),
+                              "Time after which the time avering of the solution starts. 0.0 default.");
+                              
+            prm.declare_entry("do_compute_Reynolds_stress", "false",
+                              dealii::Patterns::Bool(),
+                              "Compute time averaged solution on the fly (for example, to get velocity fluctuations). False by default.");
+            
+            prm.declare_entry("time_to_start_computing_Reynolds_stress", "0.0",
+                              dealii::Patterns::Double(0, dealii::Patterns::Double::max_double_value),
+                              "Time after which the time avering of the solution starts. 0.0 default.");       
+            
             prm.declare_entry("output_flow_field_files_directory_name", ".",
                               dealii::Patterns::FileName(dealii::Patterns::FileName::FileType::input),
                               "Name of directory for writing flow field files. Current directory by default.");

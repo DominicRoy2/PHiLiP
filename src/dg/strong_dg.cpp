@@ -1561,11 +1561,11 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_strong(
 
     AssertDimension (n_dofs, dof_indices.size());
 
-    std::vector<bool> face_orientation = {true, false, false};;
+    std::vector<bool> face_orientation = {true, false, false};
     if(this->all_parameters->flow_solver_param.use_gmsh_mesh){
-        face_orientation[0] = cell->face_orientation(iface);
-        face_orientation[1] = cell->face_rotation(iface);
-        face_orientation[2] = cell->face_flip(iface);
+        face_orientation[0] = current_cell->face_orientation(iface);
+        face_orientation[1] = current_cell->face_rotation(iface);
+        face_orientation[2] = current_cell->face_flip(iface);
     }
     // Fetch the modal soln coefficients and the modal auxiliary soln coefficients
     // We immediately separate them by state as to be able to use sum-factorization
@@ -1629,12 +1629,14 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_strong(
             soln_at_opposite_surf_q[istate].resize(n_face_quad_pts);
             //solve soln at facet cubature nodes
             if(this->wall_model_input_from_second_element) {
-                soln_basis.matrix_vector_mult_surface_1D(neighbor_iface,
+                soln_basis.matrix_vector_mult_surface_1D({true, false, false},
+                                                     neighbor_iface, n_quad_pts_1D,
                                                      neighbor_soln_coeff[istate], soln_at_opposite_surf_q[istate],
                                                      soln_basis.oneD_surf_operator,
                                                      soln_basis.oneD_vol_operator);
             } else {
-                soln_basis.matrix_vector_mult_surface_1D(opposite_iface,
+                soln_basis.matrix_vector_mult_surface_1D({true, false, false},
+                                                     opposite_iface, n_quad_pts_1D,
                                                      soln_coeff[istate], soln_at_opposite_surf_q[istate],
                                                      soln_basis.oneD_surf_operator,
                                                      soln_basis.oneD_vol_operator);

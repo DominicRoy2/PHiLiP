@@ -564,7 +564,7 @@ public:
 
 /// Wall Model Look up table
 template <typename real>
-class WallModelLookUpTable
+class WallModel
 {
     /** Number of different computed quantities
      *  Corresponds to the number of items in IntegratedQuantitiesEnum
@@ -588,9 +588,9 @@ class WallModelLookUpTable
               6.1730908478994e+04, 7.5515087179925e+04, 8.9519590674471e+04, 1.0371270861601e+05, 
               1.1807073118603e+05, 1.3257525485198e+05}};
 public:
-    WallModelLookUpTable(); ///< Constructor
+    WallModel(); ///< Constructor
 
-    ~WallModelLookUpTable(){}; ///< Destructor
+    ~WallModel(){}; ///< Destructor
 
 private:
     real interpolate(const real x, const bool extrapolate ) const; ///< interpolate function
@@ -602,7 +602,33 @@ public:
         const real distance, 
         const real viscosity_coefficient,
         const real density,
-        const double reynolds_number_inf) const;
+        const double reynolds_number_inf,
+        const real wall_shear_stress_magnitude_initial_guess = 0.002) const;
+
+    real Reichardt_law_multiplied(
+        const real y_plus, 
+        const real kappa, 
+        const real A, 
+        const real B, 
+        const real C) const;
+
+    real Reichardt_law_solver(
+        const real u_plus_times_y_plus,
+        const real y_plus_initial_guess,
+        const real tol = 1e-6, 
+        const int max_iter = 100) const;
+
+    real Spalding_law_multiplied(
+        const real y_plus, 
+        const real kappa, 
+        const real C) const;
+
+    real Spalding_law_solver(
+        const real u_plus_times_y_plus,
+        const real y_plus_initial_guess,
+        const real tol = 1e-6, 
+        const int max_iter = 100) const;
+
 };
 
 /// Navier-Stokes equations with constant physical source term for the turbulent channel flow case and wall model. Derived from NavierStokes_ChannelFlowConstantSourceTerm. 
@@ -638,7 +664,7 @@ public:
     /// Distance from wall for wall model input velocity
     const double distance_from_wall_for_wall_model_input_velocity;
 
-    std::unique_ptr < WallModelLookUpTable<real> > wall_model_look_up_table;
+    std::unique_ptr < WallModel<real> > wall_model_look_up_table;
 
     /** Nondimensionalized viscous flux (i.e. dissipative flux) dot normal vector that accounts for gradient boundary conditions
      *  when the on boundary flag is true -- contains the wall model
