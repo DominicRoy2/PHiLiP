@@ -63,7 +63,7 @@ public:
     ~OperatorsBase() {};
 
     ///Max polynomial degree.
-    const unsigned int max_degree;
+    unsigned int max_degree;
     ///Max grid degree.
     const unsigned int max_grid_degree;
     ///Number of states.
