@@ -5,7 +5,11 @@ namespace PHiLiP {
 template <int dim, int nstate, typename real, typename MeshType>
 std::unique_ptr <MeshErrorEstimateBase <dim, real, MeshType>> MeshErrorFactory<dim, nstate, real, MeshType>::create_mesh_error(std::shared_ptr< DGBase<dim,real,MeshType>> dg)
 {
-    if (!(dg->all_parameters->mesh_adaptation_param.use_goal_oriented_mesh_adaptation))
+    if (!(dg->all_parameters->mesh_adaptation_param.use_goal_oriented_mesh_adaptation) && dg->all_parameters->mesh_adaptation_param.use_explicit_mesh_adaptation)
+    {
+        return std::make_unique<ExplicitErrorEstimate<dim, real, MeshType>>(dg);
+    }
+    else if (!(dg->all_parameters->mesh_adaptation_param.use_goal_oriented_mesh_adaptation))
     {
         return std::make_unique<ResidualErrorEstimate<dim, real, MeshType>>(dg);
     }

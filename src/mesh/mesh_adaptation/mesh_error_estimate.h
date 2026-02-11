@@ -69,6 +69,27 @@ public:
 
 };
 
+#if PHILIP_DIM==1
+template <int dim, typename real, typename MeshType = dealii::Triangulation<dim>>
+#else
+template <int dim, typename real, typename MeshType = dealii::parallel::distributed::Triangulation<dim>>
+#endif
+/// Class to compute error estimate for explicit time stepping
+class ExplicitErrorEstimate : public MeshErrorEstimateBase <dim, real, MeshType>
+{
+
+public:
+    /// Computes maximum residual error in each cell.
+    dealii::Vector<real> compute_cellwise_errors () override;
+
+    /// Constructor
+    ExplicitErrorEstimate(std::shared_ptr<DGBase<dim,real,MeshType>> dg_input);
+
+    /// Destructor
+    ~ExplicitErrorEstimate() {};
+
+};
+
 
 /// DualWeightedResidualError class
 /** 

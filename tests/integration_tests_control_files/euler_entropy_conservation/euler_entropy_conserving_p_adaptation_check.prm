@@ -25,6 +25,7 @@ set conv_num_flux = two_point_flux
 subsection mesh adaptation
     set total_mesh_adaptation_cycles = 1
     set use_goal_oriented_mesh_adaptation = false
+    set use_explicit_mesh_adaptation = true
     set mesh_adaptation_type = p_adaptation
     subsection fixed-fraction
       set refine_fraction = 0.5
@@ -47,8 +48,8 @@ end
 
 subsection flow_solver
   set flow_case_type = taylor_green_vortex
-  set poly_degree = 1
-  set max_poly_degree_for_adaptation = 2
+  set poly_degree = 0
+  set max_poly_degree_for_adaptation = 1
   set final_time = 0.1
   set courant_friedrichs_lewy_number = 0.005
   set unsteady_data_table_filename = tgv_kinetic_energy_vs_time_table

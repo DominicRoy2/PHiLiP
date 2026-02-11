@@ -73,6 +73,32 @@ dealii::Vector<real> ResidualErrorEstimate<dim, real, MeshType> :: compute_cellw
     return cellwise_errors;
 }
 
+template <int dim, typename real, typename MeshType>
+ExplicitErrorEstimate<dim, real, MeshType> :: ExplicitErrorEstimate(std::shared_ptr< DGBase<dim, real, MeshType> > dg_input)
+    : MeshErrorEstimateBase<dim, real, MeshType> (dg_input)
+    {}
+
+template <int dim, typename real, typename MeshType>
+dealii::Vector<real> ExplicitErrorEstimate<dim, real, MeshType> :: compute_cellwise_errors()
+{
+    std::vector<dealii::types::global_dof_index> dofs_indices;
+    dealii::Vector<real> cellwise_errors (this->dg->high_order_grid->triangulation->n_active_cells());
+    this->dg->assemble_residual();
+
+    for (const auto &cell : this->dg->dof_handler.active_cell_iterators()) 
+    {
+        if(!cell->is_locally_owned())  continue;
+
+        if(cell->active_cell_index()%2 == 0){
+            cellwise_errors[cell->active_cell_index()] = 1.0;
+        }else{
+            cellwise_errors[cell->active_cell_index()] = 0;
+        }
+    }
+
+    return cellwise_errors;
+}
+
 // constructor
 template <int dim, int nstate, typename real, typename MeshType>
 DualWeightedResidualError<dim, nstate, real, MeshType>::DualWeightedResidualError(std::shared_ptr< DGBase<dim, real, MeshType> > dg_input)
@@ -460,6 +486,14 @@ template class ResidualErrorEstimate<PHILIP_DIM, double, dealii::parallel::share
 #if PHILIP_DIM != 1
 template class ResidualErrorEstimate<PHILIP_DIM, double, dealii::parallel::distributed::Triangulation<PHILIP_DIM>>;
 #endif
+
+
+template class ExplicitErrorEstimate<PHILIP_DIM, double, dealii::Triangulation<PHILIP_DIM>>;
+template class ExplicitErrorEstimate<PHILIP_DIM, double, dealii::parallel::shared::Triangulation<PHILIP_DIM>>;
+#if PHILIP_DIM != 1
+template class ExplicitErrorEstimate<PHILIP_DIM, double, dealii::parallel::distributed::Triangulation<PHILIP_DIM>>;
+#endif
+
 
 template class DualWeightedResidualError <PHILIP_DIM, 1, double, dealii::Triangulation<PHILIP_DIM>>;
 template class DualWeightedResidualError <PHILIP_DIM, 2, double, dealii::Triangulation<PHILIP_DIM>>;
