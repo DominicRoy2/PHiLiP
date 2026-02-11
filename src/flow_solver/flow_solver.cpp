@@ -408,6 +408,23 @@ void FlowSolver<dim,nstate>::perform_steady_state_mesh_adaptation() const
 }
 
 template <int dim, int nstate>
+void FlowSolver<dim,nstate>::perform_explicit_mesh_adaptation() const
+{
+    std::unique_ptr<MeshAdaptation<dim,double>> meshadaptation = std::make_unique<MeshAdaptation<dim,double>>(this->dg, &(this->all_param.mesh_adaptation_param));
+    const int total_adaptation_cycles = this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles;
+    
+    pcout<<"Running mesh adaptation cycles..."<<std::endl;
+    while (meshadaptation->current_mesh_adaptation_cycle < total_adaptation_cycles)
+    {
+        meshadaptation->adapt_mesh();
+    }
+
+    pcout<<"Finished running mesh adaptation cycles."<<std::endl; 
+}
+
+
+
+template <int dim, int nstate>
 int FlowSolver<dim,nstate>::run() const
 {
     pcout << "Running Flow Solver..." << std::endl;
@@ -448,6 +465,13 @@ int FlowSolver<dim,nstate>::run() const
         //----------------------------------------------------
         // Initializing restart related variables
         //----------------------------------------------------
+
+
+        if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0){
+            pcout << "\nPerforming initial mesh adaptation...\n" << std::flush;
+            perform_explicit_mesh_adaptation();
+        }
+
 #if PHILIP_DIM>1
         double current_desired_time_for_output_restart_files_every_dt_time_intervals = ode_solver->current_time;
         unsigned int current_restart_file_number = 1;

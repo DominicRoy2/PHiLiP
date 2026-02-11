@@ -142,6 +142,8 @@ private:
      */
     void perform_steady_state_mesh_adaptation() const;
 
+    void perform_explicit_mesh_adaptation() const;
+
     /// Fixed times at which to output the solution
     dealii::Table<1,double> output_solution_fixed_times;
 };
