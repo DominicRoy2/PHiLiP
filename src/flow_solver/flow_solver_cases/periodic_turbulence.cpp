@@ -416,12 +416,12 @@ void PeriodicTurbulence<dim, nstate>::compute_and_update_integrated_quantities(D
     int overintegrate = 10;
 
     // Set the quadrature of size dim and 1D for sum-factorization.
-    dealii::QGauss<dim> quad_extra(dg.max_degree+1+overintegrate);
-    dealii::QGauss<1> quad_extra_1D(dg.max_degree+1+overintegrate);
+    dealii::QGauss<dim> quad_extra(dg.initial_degree+1+overintegrate);
+    dealii::QGauss<1> quad_extra_1D(dg.initial_degree+1+overintegrate);
 
     const unsigned int n_quad_pts = quad_extra.size();
     const unsigned int grid_degree = dg.high_order_grid->fe_system.tensor_degree();
-    const unsigned int poly_degree = dg.max_degree;
+    const unsigned int poly_degree = dg.initial_degree;
     // Construct the basis functions and mapping shape functions.
     OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
     OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
