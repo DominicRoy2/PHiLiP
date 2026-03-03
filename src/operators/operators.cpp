@@ -456,6 +456,7 @@ void SumFactorizedOperators<dim,n_faces>::inner_product_surface_1D(
 
     std::vector<double> input_vect_corrected;
     if(!face_orientation[0] || face_orientation[1] || face_orientation[2]){
+        std::cout << "\n******************It appears deal.ii has fliped a face.*************************\n";
         this->face_orientation_inner_product(face_orientation, face_number, n_quad_pts_1D, input_vect, input_vect_corrected, basis_surf[0]);
     }else{
         input_vect_corrected = input_vect;
@@ -604,6 +605,35 @@ void SumFactorizedOperators<dim,n_faces>::inner_product(
     dealii::FullMatrix<double> basis_y_trans(columns_y, rows_y);
     dealii::FullMatrix<double> basis_z_trans(columns_z, rows_z);
 
+
+    // std::cout<<"basis_x.m(): "<<basis_x.m()<<". basis_x.n(): "<<basis_x.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_x["<<i<<"]["<<j<<"]: "<<basis_x[i][j]<<std::endl;
+    //     }
+    // }
+    // std::cout<<"basis_y.m(): "<<basis_y.m()<<". basis_y.n(): "<<basis_y.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_y["<<i<<"]["<<j<<"]: "<<basis_y[i][j]<<std::endl;
+    //     }
+    // }
+    // std::cout<<"basis_z.m(): "<<basis_z.m()<<". basis_z.n(): "<<basis_z.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_z["<<i<<"]["<<j<<"]: "<<basis_z[i][j]<<std::endl;
+    //     }
+    // }
+    // for(unsigned int iquad=0; iquad<input_vect.size(); iquad++){
+    //     std::cout<<"input_vect["<<iquad<<"]: "<<std::setprecision(12)<<input_vect[iquad]<<std::endl;
+    // }
+    // for(unsigned int iquad=0; iquad<weight_vect.size(); iquad++){
+    //     std::cout<<"weight_vect["<<iquad<<"]: "<<std::setprecision(12)<<weight_vect[iquad]<<std::endl;
+    // }
+    // for(unsigned int iquad=0; iquad<output_vect.size(); iquad++){
+    //     std::cout<<"output_vect["<<iquad<<"]: "<<std::setprecision(12)<<output_vect[iquad]<<std::endl;
+    // }
+
     //set as the transpose as inputed basis
     //found an issue with Tadd for arbitrary size so I manually do it here.
     for(unsigned int row=0; row<rows_x; row++){
@@ -626,7 +656,27 @@ void SumFactorizedOperators<dim,n_faces>::inner_product(
     for(unsigned int iquad=0; iquad<input_vect.size(); iquad++){
         new_input_vect[iquad] = input_vect[iquad] * weight_vect[iquad];
     }
-
+    // std::cout<<"basis_x_trans.m(): "<<basis_x_trans.m()<<". basis_x_trans.n(): "<<basis_x_trans.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_x_trans["<<i<<"]["<<j<<"]: "<<basis_x_trans[i][j]<<std::endl;
+    //     }
+    // }
+    // std::cout<<"basis_y_trans.m(): "<<basis_y_trans.m()<<". basis_y_trans.n(): "<<basis_y_trans.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_y_trans["<<i<<"]["<<j<<"]: "<<basis_y_trans[i][j]<<std::endl;
+    //     }
+    // }
+    // std::cout<<"basis_z_trans.m(): "<<basis_z_trans.m()<<". basis_z_trans.n(): "<<basis_z_trans.n()<<std::endl;
+    // for(unsigned int i=0; i<rows_x; i++){
+    //     for(unsigned int j=0; j<columns_x; j++){
+    //         std::cout<<"basis_z_trans["<<i<<"]["<<j<<"]: "<<basis_z_trans[i][j]<<std::endl;
+    //     }
+    // }
+    // for(unsigned int iquad=0; iquad<input_vect.size(); iquad++){
+    //     std::cout<<"new_input_vect["<<iquad<<"]: "<<std::setprecision(12)<<new_input_vect[iquad]<<std::endl;
+    // }
     this->matrix_vector_mult(new_input_vect, output_vect, basis_x_trans, basis_y_trans, basis_z_trans, adding, factor);
 }
 
@@ -1354,6 +1404,51 @@ void local_mass<dim,n_faces>::build_1D_volume_operator(
             if(istate_test==istate_trial) {
                 this->oneD_vol_operator[itrial][itest] = value;
                 this->oneD_vol_operator[itest][itrial] = value;
+            }
+        }
+    }
+}
+
+template <int dim, int n_faces>  
+void local_mass<dim,n_faces>::build_1D_surface_operator(
+    const dealii::FESystem<1,1> &finite_element,
+    const dealii::Quadrature<0> &face_quadrature)
+{
+    //const unsigned int n_quad_pts = face_quadrature.size();
+    const unsigned int n_dofs     = finite_element.dofs_per_cell;
+    const unsigned int n_faces_1D      = n_faces / dim;
+    //const std::vector<double> &quad_weights = quadrature.get_weights ();
+    //allocate
+    for(unsigned int iface=0; iface<n_faces_1D; iface++){ 
+        //allocate the facet operator
+        this->oneD_surf_operator[iface].reinit(n_dofs,n_dofs);
+        //sum factorized operators use a 1D element.
+        const dealii::Quadrature<1> quadrature = dealii::QProjector<1>::project_to_face(dealii::ReferenceCell::get_hypercube(1),
+                                                                                                face_quadrature,
+                                                                                                iface);
+        
+        const unsigned int n_quad_pts = quadrature.size();
+        const std::vector<double> &quad_weights = quadrature.get_weights ();
+        //loop and store
+        for (unsigned int itest=0; itest<n_dofs; ++itest) {
+            const int istate_test = finite_element.system_to_component_index(itest).first;
+            for (unsigned int itrial=itest; itrial<n_dofs; ++itrial) {
+                const int istate_trial = finite_element.system_to_component_index(itrial).first;
+                double value = 0.0;
+                for (unsigned int iquad=0; iquad<n_quad_pts; ++iquad) {
+                    const dealii::Point<1> qpoint  = quadrature.point(iquad);
+                    value +=
+                            finite_element.shape_value_component(itest,qpoint,istate_test)
+                        * finite_element.shape_value_component(itrial,qpoint,istate_trial)
+                        * quad_weights[iquad];                            
+                }
+                if(istate_test==istate_trial) {
+                    this->oneD_surf_operator[iface][itrial][itest] = value;
+                    this->oneD_surf_operator[iface][itest][itrial] = value;
+                }else{
+                    this->oneD_surf_operator[iface][itrial][itest] = 0.0;
+                    this->oneD_surf_operator[iface][itest][itrial] = 0.0;
+                }
             }
         }
     }
@@ -2193,6 +2288,381 @@ void lifting_operator<dim,n_faces>::build_1D_surface_operator(
 }
 
 template <int dim, int n_faces>  
+surface_projection_operator<dim,n_faces>::surface_projection_operator(
+    const int nstate_input,
+    const unsigned int max_degree_input,
+    const unsigned int grid_degree_input)
+    : SumFactorizedOperators<dim,n_faces>(
+        nstate_input, max_degree_input, grid_degree_input)
+{
+    current_degree = max_degree_input;
+}
+
+template <int dim, int n_faces>  
+void surface_projection_operator<dim,n_faces>::compute_local_surface_projection_operator(
+    const dealii::FullMatrix<double> &norm_matrix_inverse,
+    const dealii::FullMatrix<double> &integral_surf_basis,
+    dealii::FullMatrix<double> &surface_projection)
+{
+    norm_matrix_inverse.mTmult(surface_projection, integral_surf_basis);
+}
+
+// template <int dim, int n_faces>  
+// void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
+//     const dealii::FESystem<1,1> &finite_element,
+//     const dealii::Quadrature<0> &face_quadrature_high,
+//     const dealii::Quadrature<0> &face_quadrature_low,
+//     const unsigned int iface)
+// {
+//     const unsigned int n_dofs = finite_element.dofs_per_cell;
+
+//     // ==========================================
+//     // 1. Build integral surface basis
+//     // ==========================================
+//     face_integral_basis<dim,n_faces> integral_surf_basis(
+//         this->nstate, this->max_degree, this->max_grid_degree);
+
+//     integral_surf_basis.build_1D_surface_operator(
+//         finite_element,
+//         face_quadrature_high);
+
+//     // ==========================================
+//     // 2. Build surface mass matrix
+//     // ==========================================
+//     local_mass<dim,n_faces> local_mass_surface(
+//         this->nstate, this->max_degree, this->max_grid_degree);
+
+//     local_mass_surface.build_1D_surface_operator(
+//         finite_element,
+//         face_quadrature_low);
+
+//     // ==========================================
+//     // 3. Invert mass matrix
+//     // ==========================================
+//     dealii::FullMatrix<double> mass_inv(n_dofs);
+//     mass_inv.invert(local_mass_surface.oneD_surf_operator[iface]);
+
+//     // ==========================================
+//     // 4. Allocate projection operator
+//     // ==========================================
+//     const unsigned int n_quad_high =
+//         integral_surf_basis.oneD_surf_operator[iface].m();
+
+//     this->oneD_surf_operator[iface].reinit(n_dofs, n_quad_high);
+
+//     // ==========================================
+//     // 5. Compute projection
+//     // ==========================================
+//     compute_local_surface_projection_operator(
+//         mass_inv,
+//         integral_surf_basis.oneD_surf_operator[iface],
+//         this->oneD_surf_operator[iface]);
+// }
+
+template <int dim, int n_faces>
+void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
+    const dealii::FESystem<1,1> &fe_low,
+    const dealii::Quadrature<1> &quad_high_1D,
+    const dealii::Quadrature<1> &quad_low_1D,
+    const unsigned int iface)
+{
+    const unsigned int n_q_high = quad_high_1D.size();
+    const unsigned int n_q_low  = quad_low_1D.size();
+    const unsigned int n_dofs   = fe_low.dofs_per_cell;
+    std::cout << "\nn_q_high: "<<n_q_high;
+    std::cout << "\nn_q_low: "<<n_q_low;
+    std::cout << "\nn_dofs: "<<n_dofs;
+    const std::vector<double> &w_high = quad_high_1D.get_weights();
+    const std::vector<double> &w_low  = quad_low_1D.get_weights();
+
+    // =========================
+    // V_L_at_high (n_q_high x n_dofs)
+    // =========================
+    dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
+
+    for (unsigned int q = 0; q < n_q_high; ++q)
+    {
+        const auto &xq = quad_high_1D.point(q);
+
+        for (unsigned int i = 0; i < n_dofs; ++i)
+            V_L_at_high(q, i) = fe_low.shape_value(i, xq);
+    }
+
+    // =========================
+    // V_L_at_low (n_q_low x n_dofs)
+    // =========================
+    dealii::FullMatrix<double> V_L_at_low(n_q_low, n_dofs);
+
+    for (unsigned int q = 0; q < n_q_low; ++q)
+    {
+        const auto &xq = quad_low_1D.point(q);
+
+        for (unsigned int i = 0; i < n_dofs; ++i)
+            V_L_at_low(q, i) = fe_low.shape_value(i, xq);
+    }
+
+    // =========================
+    // Build mass matrix M_L
+    // =========================
+    dealii::FullMatrix<double> M(n_dofs, n_dofs);
+    M = 0;
+
+    for (unsigned int q = 0; q < n_q_low; ++q)
+    {
+        for (unsigned int i = 0; i < n_dofs; ++i)
+        {
+            for (unsigned int j = 0; j < n_dofs; ++j)
+            {
+                M(i,j) += V_L_at_low(q,i) * V_L_at_low(q,j) * w_low[q];
+                std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
+                std::cout << "\nV_L_at_low("<<q<<","<<i<<"): "<<V_L_at_low(q,i);
+                std::cout << "\nV_L_at_low("<<q<<","<<j<<"): "<<V_L_at_low(q,j);
+                std::cout << "\nw_low["<<q<<"]: "<<w_low[q];
+            }
+        }
+    }
+
+    // =========================
+    // Invert M
+    // =========================
+    dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
+    M_inv.copy_from(M);
+    M_inv.gauss_jordan();  // safe now (non-singular)
+
+    // =========================
+    // Build W_H (diagonal weights)
+    // =========================
+    dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
+    W_H = 0;
+    for (unsigned int q = 0; q < n_q_high; ++q){
+        W_H(q,q) = w_high[q];
+        std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
+    }
+
+    // =========================
+    // Compute: P = V_L_low * M^{-1} * V_L_high^T * W_H
+    // =========================
+
+    dealii::FullMatrix<double> tmp1(n_dofs, n_q_high);   // V^T * W
+    V_L_at_high.Tmmult(tmp1, W_H);
+
+    std::cout << "\nV_L_at_high.size(): "<<V_L_at_high.size();
+    std::cout << "\ntmp1.size(): "<<tmp1.size();
+    std::cout << "\nW_H.size(): "<<W_H.size();
+    dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
+    M_inv.mmult(tmp2, tmp1);
+    std::cout << "\ntmp2.size(): "<<tmp2.size();
+    std::cout << "\nM_inv.size(): "<<M_inv.size();
+    this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
+    V_L_at_low.mmult(this->oneD_surf_operator[iface], tmp2);
+    std::cout << "\nV_L_at_low.size(): "<<V_L_at_low.size();
+}
+// template <int dim, int n_faces>
+// void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
+//     const dealii::FESystem<1,1> &fe_low,
+//     const dealii::Quadrature<0> &quad_high,
+//     const dealii::Quadrature<0> &quad_low,
+//     const unsigned int iface)
+// {
+//     // const unsigned int n_q_high = quad_high.size();
+//     // const unsigned int n_q_low  = quad_low.size();
+//     const unsigned int n_dofs   = fe_low.dofs_per_cell;
+
+//     // face_integral_basis<dim,n_faces> B_high_builder(
+//     //     this->nstate, this->max_degree, this->max_grid_degree);
+
+//     // B_high_builder.build_1D_surface_operator(fe_low, quad_high);
+
+//     // const dealii::FullMatrix<double> &B_high =
+//     //     B_high_builder.oneD_surf_operator[iface];
+
+//     // // =========================
+//     // // Build low-order surface mass matrix M_low
+//     // // (size: n_dofs × n_dofs)
+//     // // =========================
+//     // local_mass<dim,n_faces> M_builder(
+//     //     this->nstate, this->max_degree, this->max_grid_degree);
+
+//     // M_builder.build_1D_surface_operator(fe_low, quad_low);
+
+//     // const dealii::FullMatrix<double> &M_low =
+//     //     M_builder.oneD_surf_operator[iface];
+
+
+//     // for (unsigned int i = 0; i < n_dofs; ++i)
+//     // {
+//     //     for (unsigned int j = 0; j < n_dofs; ++j)
+//     //     {
+
+//     //         std::cout << "\nM_low["<<i<<"]["<<j<<"]: "<<M_low[i][j];
+//     //     }
+//     // }
+
+//     // // =========================
+//     // // Invert mass matrix
+//     // // =========================
+//     // dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
+//     // M_inv.copy_from(M_low);
+//     // M_inv.gauss_jordan();   // safe now (no rank deficiency)
+
+//     // // =========================
+//     // // Compute projection:
+//     // // P_modal = M^{-1} * B_high
+//     // // =========================
+//     // dealii::FullMatrix<double> tmp(n_dofs, n_q_high);
+//     // M_inv.mmult(tmp, B_high);
+
+//     // // =========================
+//     // // Evaluate back to low quad:
+//     // // reuse surface operator WITHOUT weights
+//     // // =========================
+//     // dealii::FullMatrix<double> V_low(n_q_low, n_dofs);
+//     // V_low = 0;
+
+//     // const dealii::Quadrature<1> quad_low_1D =
+//     //     dealii::QProjector<1>::project_to_face(
+//     //         dealii::ReferenceCell::get_hypercube(1),
+//     //         quad_low,
+//     //         iface);
+
+//     // for (unsigned int q = 0; q < n_q_low; ++q)
+//     // {
+//     //     const auto q_point = quad_low_1D.point(q);
+
+//     //     for (unsigned int i = 0; i < n_dofs; ++i)
+//     //     {
+//     //         const int comp = fe_low.system_to_component_index(i).first;
+
+//     //         V_low[q][i] = fe_low.shape_value_component(i, q_point, comp);
+//     //     }
+//     // }
+
+//     // // =========================
+//     // // Final operator:
+//     // // P = V_low * M^{-1} * B_high
+//     // // =========================
+//     // this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
+//     // V_low.mmult(this->oneD_surf_operator[iface], tmp);
+
+
+//     // const std::vector<double> &w_high = quad_high.get_weights();
+//     // const std::vector<double> &w_low  = quad_low.get_weights();
+
+//     // Project quadratures to face
+//     const dealii::Quadrature<1> quad_high_1D =
+//         dealii::QProjector<1>::project_to_face(
+//             dealii::ReferenceCell::get_hypercube(1),
+//             quad_high,
+//             iface);
+
+//     const dealii::Quadrature<1> quad_low_1D =
+//         dealii::QProjector<1>::project_to_face(
+//             dealii::ReferenceCell::get_hypercube(1),
+//             quad_low,
+//             iface);
+
+    
+//     const unsigned int n_q_high = quad_high.size();
+//     const unsigned int n_q_low  = quad_low.size();
+
+//     const std::vector<double> &w_high = quad_high_1D.get_weights();
+//     //const std::vector<double> &w_low  = quad_low_1D.get_weights();
+
+//     // Allocate matrices
+//     //dealii::FullMatrix<double> W(n_dofs, n_q_high);     // coupling
+//     dealii::FullMatrix<double> W(n_q_high, n_q_high);     // coupling
+//     dealii::FullMatrix<double> M(n_dofs, n_dofs);       // mass matrix
+//     dealii::FullMatrix<double> V(n_q_low, n_dofs);      // eval to low quad
+//     W = 0;
+//     M = 0;
+//     V = 0;
+
+
+//     // =========================
+//     // Build W matrix
+//     // =========================
+//     for (unsigned int q = 0; q < n_q_high; ++q)
+//     {
+//         const dealii::Point<1> q_point = quad_high_1D.point(q);
+
+//         for (unsigned int i = 0; i < n_q_high; ++i)
+//         {
+//             const int comp = fe_low.system_to_component_index(i).first;
+
+//             W[i][q] = fe_low.shape_value_component(i, q_point, comp)
+//                       * w_high[q];
+//             std::cout << "\nW["<<i<<"]["<<q<<"]: "<<W[i][q];
+//         }
+//     }
+
+
+    
+//     // =========================
+//     // Build Mass matrix
+//     // =========================
+//     for (unsigned int q = 0; q < n_q_high; ++q)
+//     {
+//         const dealii::Point<1> q_point = quad_high_1D.point(q);
+
+//         for (unsigned int i = 0; i < n_dofs; ++i)
+//         {
+//             const int comp_i = fe_low.system_to_component_index(i).first;
+//             const double phi_i =
+//                 fe_low.shape_value_component(i, q_point, comp_i);
+
+//             for (unsigned int j = 0; j < n_dofs; ++j)
+//             {
+//                 const int comp_j = fe_low.system_to_component_index(j).first;
+//                 const double phi_j =
+//                     fe_low.shape_value_component(j, q_point, comp_j);
+//                 //M[i][j] += phi_i * phi_j * w_high[q];  // <-- KEY CHANGE
+//                 if(i == j){
+//                     M[i][j] += w_high[q];  // <-- KEY CHANGE
+//                 }else{
+//                     M[i][j] = 0;
+//                 }
+//                 std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
+//                 std::cout << "\nphi_i: "<<phi_i;
+//                 std::cout << "\nphi_j: "<<phi_j;
+//                 std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
+
+//             }
+//         }
+//     }
+//     // =========================
+//     // Build Vandermonde matrix
+//     // =========================
+//     for (unsigned int q = 0; q < n_q_low; ++q)
+//     {
+//         const dealii::Point<1> q_point = quad_low_1D.point(q);
+
+//         for (unsigned int i = 0; i < n_dofs; ++i)
+//         {
+//             const int comp = fe_low.system_to_component_index(i).first;
+
+//             V[q][i] = fe_low.shape_value_component(i, q_point, comp);
+//             std::cout << "\nV["<<q<<"]["<<i<<"]: "<<V[q][i];
+//         }
+//     }
+
+//     // =========================
+//     // Compute M^{-1}
+//     // =========================
+//     dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
+//     M_inv.copy_from(M);
+//     M_inv.gauss_jordan();
+
+//     // =========================
+//     // Compute P = V * M^{-1} * W
+//     // =========================
+//     dealii::FullMatrix<double> tmp(n_dofs, n_q_high);
+//     M_inv.mmult(tmp, W);   // tmp = M^{-1} * W
+
+//     this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
+//     V.mmult(this->oneD_surf_operator[iface], tmp); // P = V * tmp
+// }
+
+template <int dim, int n_faces>  
 lifting_operator_FR<dim,n_faces>::lifting_operator_FR(
     const int nstate_input,
     const unsigned int max_degree_input,
@@ -2408,6 +2878,11 @@ void metric_operators<real,dim,n_faces>::build_volume_metric_operators(
     mapping_shape_functions<dim,n_faces> &mapping_basis,
     const bool use_invariant_curl_form)
 {
+    // std::cout<<"\nInside build_VOLUME_metric_operators. "<<std::endl;
+    // std::cout<<"n_quad_pts: "<<n_quad_pts<<std::endl;
+    // std::cout<<"n_metric_dofs: "<<n_metric_dofs<<std::endl;
+    // std::cout<<"mapping_support_points[0].size(): "<<mapping_support_points[0].size()<<std::endl;
+    
     det_Jac_vol.resize(n_quad_pts);
     for(int idim=0; idim<dim; idim++){
         for(int jdim=0; jdim<dim; jdim++){
@@ -2466,6 +2941,12 @@ void metric_operators<real,dim,n_faces>::build_facet_metric_operators(
     mapping_shape_functions<dim,n_faces> &mapping_basis,
     const bool use_invariant_curl_form)
 {
+    // std::cout<<"Inside build_FACET_metric_operators. "<<std::endl;
+    // std::cout<<"iface: "<<iface<<std::endl;
+    // std::cout<<"n_quad_pts: "<<n_quad_pts<<std::endl;
+    // std::cout<<"n_metric_dofs: "<<n_metric_dofs<<std::endl;
+    // std::cout<<"mapping_support_points[0].size(): "<<mapping_support_points[0].size()<<std::endl;
+    
     det_Jac_surf.resize(n_quad_pts);
     for(int idim=0; idim<dim; idim++){
         for(int jdim=0; jdim<dim; jdim++){
@@ -2597,6 +3078,15 @@ void metric_operators<real,dim,n_faces>::build_determinant_metric_Jacobian(
     const dealii::FullMatrix<double> &grad_basis_z_flux_nodes,
     std::vector<real> &det_metric_Jac)
 {
+    // std::cout<<"Inside build_determinant_metric_Jacobian. "<<std::endl;
+    // std::cout<<"n_quad_pts: "<<n_quad_pts<<std::endl;
+    // std::cout<<"this->max_degree: "<<this->max_degree<<std::endl;
+    // std::cout<<"basis_x_flux_nodes.m(): "<<basis_x_flux_nodes.m()<<". basis_x_flux_nodes.n(): "<<basis_x_flux_nodes.n()<<std::endl;
+    // std::cout<<"basis_y_flux_nodes.m(): "<<basis_y_flux_nodes.m()<<". basis_y_flux_nodes.n(): "<<basis_y_flux_nodes.n()<<std::endl;
+    // std::cout<<"basis_z_flux_nodes.m(): "<<basis_z_flux_nodes.m()<<". basis_z_flux_nodes.n(): "<<basis_z_flux_nodes.n()<<std::endl;
+    // std::cout<<"grad_basis_x_flux_nodes.m(): "<<grad_basis_x_flux_nodes.m()<<". grad_basis_x_flux_nodes.n(): "<<grad_basis_x_flux_nodes.n()<<std::endl;
+    // std::cout<<"grad_basis_y_flux_nodes.m(): "<<grad_basis_y_flux_nodes.m()<<". grad_basis_y_flux_nodes.n(): "<<grad_basis_y_flux_nodes.n()<<std::endl;
+    // std::cout<<"grad_basis_z_flux_nodes.m(): "<<grad_basis_z_flux_nodes.m()<<". grad_basis_z_flux_nodes.n(): "<<grad_basis_z_flux_nodes.n()<<std::endl;
     //mapping support points must be passed as a vector[dim][n_metric_dofs]
     assert(pow(this->max_grid_degree+1,dim) == mapping_support_points[0].size());
 
@@ -3085,6 +3575,7 @@ template class vol_integral_gradient_basis <PHILIP_DIM, 2*PHILIP_DIM>;
 
 //template class basis_at_facet_cubature <PHILIP_DIM, 2*PHILIP_DIM>;
 template class face_integral_basis <PHILIP_DIM, 2*PHILIP_DIM>;
+template class surface_projection_operator <PHILIP_DIM, 2*PHILIP_DIM>;
 template class lifting_operator <PHILIP_DIM, 2*PHILIP_DIM>;
 template class lifting_operator_FR <PHILIP_DIM, 2*PHILIP_DIM>;
 

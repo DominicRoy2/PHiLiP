@@ -462,7 +462,7 @@ void DGBaseState<dim,nstate,real,MeshType>::set_store_surf_flux_nodes()
     //if all boundaries are periodic, we do not need to store surf flux nodes.
     //for boundary conditions not periodic we need surface flux nodes
     //should change this flag to something like if have face on boundary not periodic in the future
-    this->store_surf_flux_nodes = (this->all_parameters->all_boundaries_are_periodic) ? false : true;
+    this->store_surf_flux_nodes = (this->all_parameters->all_boundaries_are_periodic) ? true : true;
 }
 
 template <int dim, int nstate, typename real, typename MeshType>
@@ -791,6 +791,7 @@ void DGBase<dim,real,MeshType>::assemble_cell_residual (
     (void) fe_values_collection_face_int;
     (void) fe_values_collection_face_ext;
     (void) fe_values_collection_subface;
+    pcout<<"Computig Volume Term. Looping over faces."<<std::endl;
     for (unsigned int iface=0; iface < dealii::GeometryInfo<dim>::faces_per_cell; ++iface) {
 
         auto current_face = current_cell->face(iface);
@@ -1081,7 +1082,7 @@ void DGBase<dim,real,MeshType>::assemble_cell_residual (
             // but will be evaluated when we visit the other cell.
         }
     } // end of face loop
-
+    pcout<<"END OF FACE LOOP"<<std::endl;
     if(compute_auxiliary_right_hand_side) {
         // Add local contribution from current cell to global vector
         for (unsigned int i=0; i<n_dofs_curr_cell; ++i) {
@@ -1302,33 +1303,43 @@ void DGBase<dim,real,MeshType>::reinit_operators_for_cell_residual_loop(
     OPERATOR::vol_projection_operator<dim,2*dim> &soln_basis_projection_oper_ext,
     OPERATOR::mapping_shape_functions<dim,2*dim> &mapping_basis)
 {
+    //pcout<<"\nInside: reinit_operators_for_cell_residual_loop."<<std::endl;
+
+    //const unsigned int max_poly = std::max(poly_degree_int, poly_degree_ext);
+
+
+    //pcout<<"Building soln_basis_int operators."<<std::endl;
     soln_basis_int.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
     soln_basis_int.build_1D_gradient_operator(oneD_fe_collection_1state[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
     soln_basis_int.build_1D_surface_operator(oneD_fe_collection_1state[poly_degree_int], oneD_face_quadrature);
     soln_basis_int.build_1D_surface_gradient_operator(oneD_fe_collection_1state[poly_degree_int], oneD_face_quadrature);
-
+    //pcout<<"Building soln_basis_ext operators."<<std::endl;
     soln_basis_ext.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[poly_degree_ext]);
     soln_basis_ext.build_1D_gradient_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[poly_degree_ext]);
+    // soln_basis_ext.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[max_poly]);
+    // soln_basis_ext.build_1D_gradient_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[max_poly]);
     soln_basis_ext.build_1D_surface_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_face_quadrature);
     soln_basis_ext.build_1D_surface_gradient_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_face_quadrature);
-
+    //pcout<<"Building flux_basis_int operators."<<std::endl;
     flux_basis_int.build_1D_volume_operator(oneD_fe_collection_flux[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
     flux_basis_int.build_1D_gradient_operator(oneD_fe_collection_flux[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
     flux_basis_int.build_1D_surface_operator(oneD_fe_collection_flux[poly_degree_int], oneD_face_quadrature);
     flux_basis_int.build_1D_surface_gradient_operator(oneD_fe_collection_flux[poly_degree_int], oneD_face_quadrature);
-
+    //pcout<<"Building flux_basis_ext operators."<<std::endl;
     flux_basis_ext.build_1D_volume_operator(oneD_fe_collection_flux[poly_degree_ext], oneD_quadrature_collection[poly_degree_ext]);
     flux_basis_ext.build_1D_gradient_operator(oneD_fe_collection_flux[poly_degree_ext], oneD_quadrature_collection[poly_degree_ext]);
+    // soln_basis_ext.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[max_poly]);
+    // soln_basis_ext.build_1D_gradient_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[max_poly]);
     flux_basis_ext.build_1D_surface_operator(oneD_fe_collection_flux[poly_degree_ext], oneD_face_quadrature);
     flux_basis_ext.build_1D_surface_gradient_operator(oneD_fe_collection_flux[poly_degree_ext], oneD_face_quadrature);
-
+    //pcout<<"Building flux_basis_stiffness operators."<<std::endl;
     //flux basis stiffness operator for skew-symmetric form
     flux_basis_stiffness.build_1D_volume_operator(oneD_fe_collection_flux[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
-
+    //pcout<<"Building soln_basis_projection_oper_int operators."<<std::endl;
     //basis functions projection operator
     soln_basis_projection_oper_int.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_int], oneD_quadrature_collection[poly_degree_int]);
     soln_basis_projection_oper_ext.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree_ext], oneD_quadrature_collection[poly_degree_ext]);
-
+    //pcout<<"Building mapping_basis operators."<<std::endl;
     //We only need to compute the most recent mapping basis since we compute interior before looping faces
     mapping_basis.build_1D_shape_functions_at_grid_nodes(high_order_grid->oneD_fe_system, high_order_grid->oneD_grid_nodes);
     mapping_basis.build_1D_shape_functions_at_flux_nodes(high_order_grid->oneD_fe_system, oneD_quadrature_collection[poly_degree_ext], oneD_face_quadrature);
@@ -1537,7 +1548,7 @@ void DGBase<dim,real,MeshType>::assemble_residual (const bool compute_dRdW, cons
                 right_hand_side,
                 auxiliary_right_hand_side);
         } // end of cell loop
-
+        pcout << "END OF CELL LOOP" << std::endl;
         if(all_parameters->store_residual_cpu_time){
             timer.stop();
             assemble_residual_time += timer.cpu_time();
@@ -1622,7 +1633,7 @@ void DGBase<dim,real,MeshType>::assemble_residual (const bool compute_dRdW, cons
     }
     //if ( compute_dRdW ) system_matrix.compress(dealii::VectorOperation::insert);
     //system_matrix.print(std::cout);
-
+    pcout << "END OF ASSEMBLE RESIDUAL" << std::endl;
 } // end of assemble_system_explicit ()
 
 template <int dim, typename real, typename MeshType>
@@ -2560,9 +2571,9 @@ void DGBase<dim,real,MeshType>::evaluate_mass_matrices (bool do_inverse_mass_mat
 
         //Check if need to recompute the 1D basis for the current degree (if different than previous cell)
         //That is, if the poly_degree, manifold type, or grid degree is different than previous reference operator
-        if((fe_index_curr_cell != mapping_basis.current_degree) || 
-           (curr_grid_degree != mapping_basis.current_grid_degree))
-        {
+        // if((fe_index_curr_cell != mapping_basis.current_degree) || 
+        //    (curr_grid_degree != mapping_basis.current_grid_degree))
+        // {
             reinit_operators_for_mass_matrix(Cartesian_element, fe_index_curr_cell, curr_grid_degree, mapping_basis, basis, reference_mass_matrix, reference_FR, reference_FR_aux, deriv_p);
 
             mapping_basis.current_degree = fe_index_curr_cell;
@@ -2571,7 +2582,7 @@ void DGBase<dim,real,MeshType>::evaluate_mass_matrices (bool do_inverse_mass_mat
             reference_FR.current_degree = fe_index_curr_cell;
             reference_FR_aux.current_degree = fe_index_curr_cell;
             deriv_p.current_degree = fe_index_curr_cell;
-        }
+        //}
 
         // Current reference element related to this physical cell
         const unsigned int n_dofs_cell = fe_collection[fe_index_curr_cell].n_dofs_per_cell();
@@ -2918,7 +2929,7 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
     if(all_parameters->store_residual_cpu_time){
         timer.start();
     }
-
+    //pcout << "Looping over cells inside apply_inverse_global_mass_matrix" << std::endl;
     for (auto soln_cell = dof_handler.begin_active(); soln_cell != dof_handler.end(); ++soln_cell, ++metric_cell) {
         if (!soln_cell->is_locally_owned()) continue;
 
@@ -2931,9 +2942,9 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
         const bool Cartesian_element = (soln_cell->manifold_id() == dealii::numbers::flat_manifold_id);
 
         // if poly degree, the element manifold type, or grid degree changed for this cell, reinitialize the reference operator
-        if((poly_degree != mass_inv.current_degree && Cartesian_element && !use_auxiliary_eq) || 
-            (poly_degree != projection_oper.current_degree && (grid_degree > 1 || Cartesian_element) && !use_auxiliary_eq))
-        {
+        // if((poly_degree != mass_inv.current_degree && Cartesian_element && !use_auxiliary_eq) || 
+        //     (poly_degree != projection_oper.current_degree && (grid_degree > 1 || Cartesian_element) && !use_auxiliary_eq))
+        // {
             mapping_basis.build_1D_shape_functions_at_volume_flux_nodes(high_order_grid->oneD_fe_system, oneD_quadrature_collection[poly_degree]);
             if(Cartesian_element){//then we can factor out det of Jac and rapidly simplify
                 mass_inv.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree], oneD_quadrature_collection[poly_degree]);
@@ -2947,7 +2958,7 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
                     projection_oper_aux.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree], oneD_quadrature_collection[poly_degree]);
                 }
             }
-        }
+        //}
 
         // get mapping support points and determinant of Jacobian
         // setup metric cell
@@ -2969,6 +2980,10 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
         //get determinant of Jacobian
         const unsigned int n_quad_pts = volume_quadrature_collection[poly_degree].size();
         const unsigned int n_grid_nodes = n_metric_dofs / dim;
+        // std::cout<<"\npoly_degree: "<<poly_degree<<std::endl;
+        // std::cout<<"n_quad_pts: "<<n_quad_pts<<std::endl;
+        // std::cout<<"n_metric_dofs: "<<n_metric_dofs<<std::endl;
+        // std::cout<<"mapping_support_points[0].size(): "<<mapping_support_points[0].size()<<std::endl;
         //get determinant of Jacobian
         OPERATOR::metric_operators<real, dim, 2*dim> metric_oper(1, poly_degree, grid_degree);
         metric_oper.build_determinant_volume_metric_Jacobian(
@@ -3033,7 +3048,7 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
             }
         }//end of state loop
     }//end of cell loop
-
+    std::cout<<"END OF CELL LOOP INSIDE apply_inverse_global_mass_matrix"<<std::endl;
     if(all_parameters->store_residual_cpu_time){
         timer.stop();
         assemble_residual_time += timer.cpu_time();

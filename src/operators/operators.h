@@ -491,6 +491,11 @@ public:
             const dealii::FESystem<1,1> &finite_element,
             const dealii::Quadrature<1> &quadrature); //override;
 
+    /// Assembles the one dimensional operator.
+    void build_1D_surface_operator(
+            const dealii::FESystem<1,1> &finite_element,
+            const dealii::Quadrature<0> &quadrature); //override;
+
     /// Assemble the dim mass matrix on the fly with metric Jacobian dependence.
     /** Note: n_shape_functions is not the same as n_dofs, but the number of 
      *  shape functions for the state.
@@ -984,6 +989,38 @@ public:
 ************************************************************************/
 
 
+///Projection operator from high-order face back to lower order.
+template<int dim, int n_faces>
+class surface_projection_operator : public SumFactorizedOperators<dim,n_faces>
+{
+public:
+    ///Constructor.
+    surface_projection_operator (
+        const int nstate_input,
+        const unsigned int max_degree_input,
+        const unsigned int grid_degree_input);
+
+    ///Destructor.
+    ~surface_projection_operator () {};
+
+    ///Stores the degree of the current poly degree.
+    unsigned int current_degree;
+
+    ///Computes a single local projection operator on some space (norm).
+    void compute_local_surface_projection_operator(
+            const dealii::FullMatrix<double> &norm_matrix_inverse, 
+            const dealii::FullMatrix<double> &integral_vol_basis, 
+            dealii::FullMatrix<double> &surface_projection);
+
+    ///Assembles the one dimensional operator.
+    void build_1D_surface_operator(
+            const dealii::FESystem<1,1> &finite_element,
+            const dealii::Quadrature<1> &face_quadrature_high,
+            const dealii::Quadrature<1> &face_quadrature_low,
+            const unsigned int iface);
+};
+
+
 ///The surface integral of test functions.
 /**\f[
 *     \mathbf{W}_f \mathbf{\chi}(\mathbf{\xi}_f^r) 
@@ -1182,8 +1219,8 @@ public:
         const int nstate_input,
         const unsigned int max_degree_input,
         const unsigned int grid_degree_input,
-        const bool store_vol_flux_nodes_input = false,
-        const bool store_surf_flux_nodes_input = false,
+        const bool store_vol_flux_nodes_input = true,
+        const bool store_surf_flux_nodes_input = true,
         const bool store_Jacobian_input = false);
 
     ///Destructor.
