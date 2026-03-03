@@ -1219,7 +1219,7 @@ public:
         const int nstate_input,
         const unsigned int max_degree_input,
         const unsigned int grid_degree_input,
-        const bool store_vol_flux_nodes_input = true,
+        const bool store_vol_flux_nodes_input = false,
         const bool store_surf_flux_nodes_input = true,
         const bool store_Jacobian_input = false);
 
