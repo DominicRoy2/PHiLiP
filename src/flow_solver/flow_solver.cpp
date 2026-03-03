@@ -418,7 +418,7 @@ void FlowSolver<dim,nstate>::perform_explicit_mesh_adaptation() const
     {
         meshadaptation->adapt_mesh();
     }
-
+    ode_solver->allocate_ode_system();
     pcout<<"Finished running mesh adaptation cycles."<<std::endl; 
 }
 
@@ -468,8 +468,9 @@ int FlowSolver<dim,nstate>::run() const
 
 
         if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0){
-            pcout << "\nPerforming initial mesh adaptation...\n" << std::flush;
+            pcout << "\nPerforming initial mesh adaptation..." << std::endl;
             perform_explicit_mesh_adaptation();
+            pcout << "Initial mesh adaptation completed.\n" << std::endl;
         }
 
 #if PHILIP_DIM>1

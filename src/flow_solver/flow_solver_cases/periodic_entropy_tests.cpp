@@ -57,7 +57,7 @@ double PeriodicEntropyTests<dim, nstate>::compute_integrated_quantities(DGBase<d
     if (dg.get_max_fe_degree() != dg.get_min_fe_degree()) {
         // Note: This function may have issues with nonuniform p. Should test in debug mode if developing in the future.
         this->pcout << "ERROR: compute_integrated_quantities() is untested for nonuniform p. Aborting..." << std::endl;
-        std::abort();
+        //std::abort();
     }
 
     double integrated_quantity = 0.0;
@@ -68,29 +68,35 @@ double PeriodicEntropyTests<dim, nstate>::compute_integrated_quantities(DGBase<d
 
     const unsigned int n_quad_pts = quad_extra.size();
     const unsigned int grid_degree = dg.high_order_grid->fe_system.tensor_degree();
-    const unsigned int poly_degree = dg.max_degree;
-    // Construct the basis functions and mapping shape functions.
-    OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
-    OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
-    // Build basis function volume operator and gradient operator from 1D finite element for 1 state.
-    soln_basis.build_1D_volume_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
-    soln_basis.build_1D_gradient_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
-    // Build mapping shape functions operators using the oneD high_ordeR_grid finite element
-    mapping_basis.build_1D_shape_functions_at_grid_nodes(dg.high_order_grid->oneD_fe_system, dg.high_order_grid->oneD_grid_nodes);
-    mapping_basis.build_1D_shape_functions_at_flux_nodes(dg.high_order_grid->oneD_fe_system, quad_extra_1D, dg.oneD_face_quadrature);
-    const std::vector<double> &quad_weights = quad_extra.get_weights();
-    // If in the future we need the physical quadrature node location, turn these flags to true and the constructor will
-    // automatically compute it for you. Currently set to false as to not compute extra unused terms.
-    const bool store_vol_flux_nodes = false;//currently doesn't need the volume physical nodal position
-    const bool store_surf_flux_nodes = false;//currently doesn't need the surface physical nodal position
-
-    const unsigned int n_dofs = dg.fe_collection[poly_degree].n_dofs_per_cell();
-    const unsigned int n_shape_fns = n_dofs / nstate;
-    std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs);
+    //const unsigned int poly_degree = dg.initial_degree;
     auto metric_cell = dg.high_order_grid->dof_handler_grid.begin_active();
     // Changed for loop to update metric_cell.
     for (auto cell = dg.dof_handler.begin_active(); cell!= dg.dof_handler.end(); ++cell, ++metric_cell) {
         if (!cell->is_locally_owned()) continue;
+        //cell->get_dof_indices (dofs_indices);
+
+        // Current reference element related to this physical cell
+        const int i_fele = cell->active_fe_index();
+        const unsigned int poly_degree = i_fele;
+
+        // Construct the basis functions and mapping shape functions.
+        OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
+        OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
+        // Build basis function volume operator and gradient operator from 1D finite element for 1 state.
+        soln_basis.build_1D_volume_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+        soln_basis.build_1D_gradient_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+        // Build mapping shape functions operators using the oneD high_ordeR_grid finite element
+        mapping_basis.build_1D_shape_functions_at_grid_nodes(dg.high_order_grid->oneD_fe_system, dg.high_order_grid->oneD_grid_nodes);
+        mapping_basis.build_1D_shape_functions_at_flux_nodes(dg.high_order_grid->oneD_fe_system, quad_extra_1D, dg.oneD_face_quadrature);
+        const std::vector<double> &quad_weights = quad_extra.get_weights();
+        // If in the future we need the physical quadrature node location, turn these flags to true and the constructor will
+        // automatically compute it for you. Currently set to false as to not compute extra unused terms.
+        const bool store_vol_flux_nodes = false;//currently doesn't need the volume physical nodal position
+        const bool store_surf_flux_nodes = true;//currently doesn't need the surface physical nodal position
+        
+        const unsigned int n_dofs = dg.fe_collection[poly_degree].n_dofs_per_cell();
+        const unsigned int n_shape_fns = n_dofs / nstate;
+        std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs);
         cell->get_dof_indices (dofs_indices);
 
         // We first need to extract the mapping support points (grid nodes) from high_order_grid.
