@@ -3672,7 +3672,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
         for(unsigned int ishape=0; ishape<n_shape_fns_int; ishape++){
             local_rhs_int_cell(istate*n_shape_fns_int + ishape) += rhs_int[ishape];
-            //pcout<<"rhs_int["<<ishape<<"]: "<<rhs_int[ishape]<<std::endl;
         }
 
         // exterior RHS
@@ -3814,10 +3813,8 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
         for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
             local_rhs_ext_cell(istate*n_shape_fns_ext + ishape) += rhs_ext[ishape];
-            //pcout<<"rhs_ext["<<ishape<<"]: "<<rhs_ext[ishape]<<std::endl;
         }
     }
-    pcout<<"Computed RHS for FACE TERM."<<std::endl;
 }
 
 
