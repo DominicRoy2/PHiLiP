@@ -61,7 +61,7 @@ void MeshAdaptation<dim,real,MeshType>::fixed_fraction_isotropic_refinement_and_
     } else if(mesh_adaptation_type == MeshAdaptationTypeEnum::p_adaptation){
         dealii::hp::Refinement::p_adaptivity_fixed_number(dg->dof_handler,
                                                           cellwise_errors,
-                                                          1.0,
+                                                          0.5,
                                                           0.0);
         
         // If a cell is flagged for both h and p adaptation, perform only p adaptation.
