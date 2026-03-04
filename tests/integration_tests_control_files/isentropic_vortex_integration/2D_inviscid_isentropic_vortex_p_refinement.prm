@@ -18,13 +18,14 @@ set use_inverse_mass_on_the_fly = true
 
 set all_boundaries_are_periodic = true
 set check_same_coords_in_weak_dg = false
+set enable_higher_order_vtk_output = true
 
 # numerical fluxes
 set conv_num_flux = roe #two_point_flux
 set two_point_num_flux_type = Ra
 
 subsection mesh adaptation
-    set total_mesh_adaptation_cycles = 0
+    set total_mesh_adaptation_cycles = 1
     set use_goal_oriented_mesh_adaptation = false
     set use_explicit_mesh_adaptation = true
     set mesh_adaptation_type = p_adaptation
@@ -38,8 +39,9 @@ end
 subsection ODE solver
   set ode_output = quiet 
   set ode_solver_type = runge_kutta 
-  set runge_kutta_method = euler_ex #rk4_ex
-  set output_solution_every_x_steps = 1
+  set runge_kutta_method = rk4_ex
+  #set output_solution_every_x_steps = 100
+  set output_solution_every_dt_time_intervals = 1.0
 end
 
 subsection linear solver
@@ -54,16 +56,16 @@ end
 subsection flow_solver
   set flow_case_type = isentropic_vortex
   set poly_degree = 5
-  set max_poly_degree_for_adaptation = 5
+  set max_poly_degree_for_adaptation = 10
   #set final_time = 23.66431913239 #=20 * sqrt(1.4), time for vortex to advect around the domain
   set final_time = 5.9160797831 #1/4 cycle to make ctest faster. Full cycle is recommended for better results.
-  # set final_time = 0.1
+  #set final_time = 0.1
   set courant_friedrichs_lewy_number = 0.1
   set unsteady_data_table_filename = isentropic_vortex_time_table
   set do_compute_unsteady_data_and_write_to_table = false
   subsection grid
     set grid_left_bound = -10.0
     set grid_right_bound = 10.0
-    set input_mesh_filename = ../../meshes/vortex_test
+    set number_of_grid_elements_per_dimension = 32
   end
 end

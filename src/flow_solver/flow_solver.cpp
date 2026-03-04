@@ -467,11 +467,6 @@ int FlowSolver<dim,nstate>::run() const
         //----------------------------------------------------
 
 
-        if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0){
-            pcout << "\nPerforming initial mesh adaptation..." << std::endl;
-            perform_explicit_mesh_adaptation();
-            pcout << "Initial mesh adaptation completed.\n" << std::endl;
-        }
 
 #if PHILIP_DIM>1
         double current_desired_time_for_output_restart_files_every_dt_time_intervals = ode_solver->current_time;
@@ -551,6 +546,8 @@ int FlowSolver<dim,nstate>::run() const
         {
             time_step = next_time_step; // update time step
 
+            pcout << "\n\n*** Time step: "<<ode_solver->current_iteration <<  ". Current time: "<< ode_solver->current_time <<"\n\n"<< std::endl;
+
             // check if we need to decrease the time step
             if((ode_solver->current_time+time_step) > final_time && flow_solver_param.end_exactly_at_final_time) {
                 // decrease time step to finish exactly at specified final time
@@ -568,6 +565,13 @@ int FlowSolver<dim,nstate>::run() const
             dg->set_unsteady_model_time_step(time_step);
             // advance solution
             ode_solver->step_in_time(time_step,false); // pseudotime==false
+
+
+            if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0 && ode_solver->current_iteration % 100 == 0){
+                pcout << "\nPerforming explicit mesh adaptation..." << std::endl;
+                perform_explicit_mesh_adaptation();
+                pcout << "Mesh adaptation completed.\n" << std::endl;
+            }
 
             // Compute time-averaged solution and Reynolds stresses for turbulent cases
             if(flow_solver_param.do_compute_time_averaged_solution){

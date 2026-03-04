@@ -2222,15 +2222,12 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     const unsigned int n_q_high = quad_high_1D.size();
     const unsigned int n_q_low  = quad_low_1D.size();
     const unsigned int n_dofs   = fe_low.dofs_per_cell;
-    std::cout << "\nn_q_high: "<<n_q_high;
-    std::cout << "\nn_q_low: "<<n_q_low;
-    std::cout << "\nn_dofs: "<<n_dofs;
+    // std::cout << "\nn_q_high: "<<n_q_high;
+    // std::cout << "\nn_q_low: "<<n_q_low;
+    // std::cout << "\nn_dofs: "<<n_dofs;
     const std::vector<double> &w_high = quad_high_1D.get_weights();
     const std::vector<double> &w_low  = quad_low_1D.get_weights();
 
-    // =========================
-    // V_L_at_high (n_q_high x n_dofs)
-    // =========================
     dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
 
     for (unsigned int q = 0; q < n_q_high; ++q)
@@ -2241,9 +2238,6 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
             V_L_at_high(q, i) = fe_low.shape_value(i, xq);
     }
 
-    // =========================
-    // V_L_at_low (n_q_low x n_dofs)
-    // =========================
     dealii::FullMatrix<double> V_L_at_low(n_q_low, n_dofs);
 
     for (unsigned int q = 0; q < n_q_low; ++q)
@@ -2254,9 +2248,6 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
             V_L_at_low(q, i) = fe_low.shape_value(i, xq);
     }
 
-    // =========================
-    // Build mass matrix M_L
-    // =========================
     dealii::FullMatrix<double> M(n_dofs, n_dofs);
     M = 0;
 
@@ -2267,48 +2258,39 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
             for (unsigned int j = 0; j < n_dofs; ++j)
             {
                 M(i,j) += V_L_at_low(q,i) * V_L_at_low(q,j) * w_low[q];
-                std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
-                std::cout << "\nV_L_at_low("<<q<<","<<i<<"): "<<V_L_at_low(q,i);
-                std::cout << "\nV_L_at_low("<<q<<","<<j<<"): "<<V_L_at_low(q,j);
-                std::cout << "\nw_low["<<q<<"]: "<<w_low[q];
+                // std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
+                // std::cout << "\nV_L_at_low("<<q<<","<<i<<"): "<<V_L_at_low(q,i);
+                // std::cout << "\nV_L_at_low("<<q<<","<<j<<"): "<<V_L_at_low(q,j);
+                // std::cout << "\nw_low["<<q<<"]: "<<w_low[q];
             }
         }
     }
 
-    // =========================
-    // Invert M
-    // =========================
     dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
     M_inv.copy_from(M);
-    M_inv.gauss_jordan();  // safe now (non-singular)
+    M_inv.gauss_jordan();
 
-    // =========================
-    // Build W_H (diagonal weights)
-    // =========================
+
     dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
     W_H = 0;
     for (unsigned int q = 0; q < n_q_high; ++q){
         W_H(q,q) = w_high[q];
-        std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
+        //std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
     }
-
-    // =========================
-    // Compute: P = V_L_low * M^{-1} * V_L_high^T * W_H
-    // =========================
 
     dealii::FullMatrix<double> tmp1(n_dofs, n_q_high);   // V^T * W
     V_L_at_high.Tmmult(tmp1, W_H);
 
-    std::cout << "\nV_L_at_high.size(): "<<V_L_at_high.size();
-    std::cout << "\ntmp1.size(): "<<tmp1.size();
-    std::cout << "\nW_H.size(): "<<W_H.size();
+    // std::cout << "\nV_L_at_high.size(): "<<V_L_at_high.size();
+    // std::cout << "\ntmp1.size(): "<<tmp1.size();
+    // std::cout << "\nW_H.size(): "<<W_H.size();
     dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
     M_inv.mmult(tmp2, tmp1);
-    std::cout << "\ntmp2.size(): "<<tmp2.size();
-    std::cout << "\nM_inv.size(): "<<M_inv.size();
+    // std::cout << "\ntmp2.size(): "<<tmp2.size();
+    // std::cout << "\nM_inv.size(): "<<M_inv.size();
     this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
     V_L_at_low.mmult(this->oneD_surf_operator[iface], tmp2);
-    std::cout << "\nV_L_at_low.size(): "<<V_L_at_low.size();
+    // std::cout << "\nV_L_at_low.size(): "<<V_L_at_low.size();
 }
 
 template <int dim, int n_faces>  

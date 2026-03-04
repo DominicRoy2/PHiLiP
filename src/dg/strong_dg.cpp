@@ -2334,6 +2334,9 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             soln_coeff_int[istate].resize(n_shape_fns_int);
         }
         soln_coeff_int[istate][ishape] = this->solution(dof_indices_int[idof]);
+        // if(current_cell_index == 3){
+        //     pcout<<"soln_coeff_int["<<istate<<"]["<<ishape<<"]: "<<soln_coeff_int[istate][ishape]<<std::endl;
+        // }
         for(int idim=0; idim<dim; idim++){
             if(ishape == 0){
                 aux_soln_coeff_int[istate][idim].resize(n_shape_fns_int);
@@ -2357,6 +2360,9 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             soln_coeff_ext[istate].resize(n_shape_fns_ext);
         }
         soln_coeff_ext[istate][ishape] = this->solution(dof_indices_ext[idof]);
+        // if(neighbor_cell_index == 6){
+        //     pcout<<"soln_coeff_ext["<<istate<<"]["<<ishape<<"]: "<<soln_coeff_ext[istate][ishape]<<std::endl;
+        // }
         for(int idim=0; idim<dim; idim++){
             if(ishape == 0){
                 aux_soln_coeff_ext[istate][idim].resize(n_shape_fns_ext);
@@ -2370,6 +2376,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         }
     }
 
+    //pcout<<"Interpolate the modal coefficients"<<std::endl;
     // Interpolate the modal coefficients to the volume cubature nodes.
     std::array<std::vector<real>,nstate> soln_at_vol_q_int;
     std::array<std::vector<real>,nstate> soln_at_vol_q_ext;
@@ -3647,14 +3654,25 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         //                                         soln_basis_int_interpolated.oneD_vol_operator,
         //                                         true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
 
-        // dissipative numerical flux
-        soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-                                                iface, n_quad_pts_1D_int,
-                                                diss_auxi_num_flux_dot_n[istate], 
-                                                surf_quad_weights_int, rhs_int, 
-                                                soln_basis_int.oneD_surf_operator, 
-                                                soln_basis_int.oneD_vol_operator,
-                                                true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
+        if(poly_degree_int<poly_degree_ext){
+            // dissipative numerical flux
+            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
+                                                    iface, n_quad_pts_1D_int,
+                                                    diss_auxi_num_flux_dot_n_projected[istate], 
+                                                    surf_quad_weights_int, rhs_int, 
+                                                    soln_basis_int.oneD_surf_operator, 
+                                                    soln_basis_int.oneD_vol_operator,
+                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
+        }else{
+                    // dissipative numerical flux
+            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
+                                                    iface, n_quad_pts_1D_int,
+                                                    diss_auxi_num_flux_dot_n[istate], 
+                                                    surf_quad_weights_int, rhs_int, 
+                                                    soln_basis_int.oneD_surf_operator, 
+                                                    soln_basis_int.oneD_vol_operator,
+                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
+        }
         // // dissipative numerical flux
         // soln_basis_int.inner_product_surface_1D(face_orientation_int, 
         //                                         iface, n_quad_pts_1D_int,
@@ -3805,14 +3823,24 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         //                                         soln_basis_ext_interpolated.oneD_surf_operator, 
         //                                         soln_basis_ext_interpolated.oneD_vol_operator,
         //                                         true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-        soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
+        if(poly_degree_int>poly_degree_ext){
+            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                 neighbor_iface, n_quad_pts_1D_int,
                                                 diss_auxi_num_flux_dot_n_projected[istate], 
                                                 surf_quad_weights_ext, rhs_ext, 
                                                 soln_basis_ext.oneD_surf_operator, 
                                                 soln_basis_ext.oneD_vol_operator,
                                                 true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-
+        
+        }else{
+            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
+                                                neighbor_iface, n_quad_pts_1D_int,
+                                                diss_auxi_num_flux_dot_n[istate], 
+                                                surf_quad_weights_ext, rhs_ext, 
+                                                soln_basis_ext.oneD_surf_operator, 
+                                                soln_basis_ext.oneD_vol_operator,
+                                                true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
+        }
 
         for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
             local_rhs_ext_cell(istate*n_shape_fns_ext + ishape) += rhs_ext[ishape];
