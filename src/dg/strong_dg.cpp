@@ -2283,10 +2283,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     (void) current_cell_index;
     (void) neighbor_cell_index;
 
-    // pcout<<"\ncurrent_cell_index: "<<current_cell_index<<std::endl;
-    // pcout<<"poly_degree_int: "<<poly_degree_int<<std::endl;
-    // pcout<<"neighbor_cell_index: "<<neighbor_cell_index<<std::endl;
-    // pcout<<"poly_degree_ext: "<<poly_degree_ext<<std::endl;
     // const unsigned int n_face_quad_pts = this->face_quadrature_collection[poly_degree_int].size();//assume interior cell does the work
     const unsigned int n_face_quad_pts_int = this->face_quadrature_collection[poly_degree_int].size();
     const unsigned int n_face_quad_pts_ext = this->face_quadrature_collection[poly_degree_ext].size();
@@ -2334,9 +2330,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             soln_coeff_int[istate].resize(n_shape_fns_int);
         }
         soln_coeff_int[istate][ishape] = this->solution(dof_indices_int[idof]);
-        // if(current_cell_index == 3){
-        //     pcout<<"soln_coeff_int["<<istate<<"]["<<ishape<<"]: "<<soln_coeff_int[istate][ishape]<<std::endl;
-        // }
         for(int idim=0; idim<dim; idim++){
             if(ishape == 0){
                 aux_soln_coeff_int[istate][idim].resize(n_shape_fns_int);
@@ -2360,9 +2353,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             soln_coeff_ext[istate].resize(n_shape_fns_ext);
         }
         soln_coeff_ext[istate][ishape] = this->solution(dof_indices_ext[idof]);
-        // if(neighbor_cell_index == 6){
-        //     pcout<<"soln_coeff_ext["<<istate<<"]["<<ishape<<"]: "<<soln_coeff_ext[istate][ishape]<<std::endl;
-        // }
         for(int idim=0; idim<dim; idim++){
             if(ishape == 0){
                 aux_soln_coeff_ext[istate][idim].resize(n_shape_fns_ext);
@@ -2376,7 +2366,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         }
     }
 
-    //pcout<<"Interpolate the modal coefficients"<<std::endl;
     // Interpolate the modal coefficients to the volume cubature nodes.
     std::array<std::vector<real>,nstate> soln_at_vol_q_int;
     std::array<std::vector<real>,nstate> soln_at_vol_q_ext;
@@ -2978,15 +2967,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     flux_basis_ext_interpolated.build_1D_volume_operator(this->oneD_fe_collection_flux[poly_degree_ext], this->oneD_quadrature_collection[poly_degree_ext]);
     flux_basis_ext_interpolated.build_1D_surface_operator(this->oneD_fe_collection_flux[poly_degree_ext], this->oneD_face_quadrature);
 
-    //  if(poly_degree_int != poly_degree_ext){
-    //     if(poly_degree_int > poly_degree_ext){
-    //         flux_basis_ext_interpolated.build_1D_volume_operator(this->oneD_fe_collection_flux[poly_degree_ext], this->oneD_quadrature_collection[poly_degree_int]);
-    //         flux_basis_ext_interpolated.build_1D_surface_operator(this->oneD_fe_collection_flux[poly_degree_ext], this->oneD_face_quadrature);
-    //     }else{
-    //         flux_basis_int_interpolated.build_1D_volume_operator(this->oneD_fe_collection_flux[poly_degree_int], this->oneD_quadrature_collection[poly_degree_ext]);
-    //         flux_basis_int_interpolated.build_1D_surface_operator(this->oneD_fe_collection_flux[poly_degree_int], this->oneD_face_quadrature);
-    //     }
-    // }
     for(int istate=0; istate<nstate; istate++){
         //allocate
         conv_int_vol_ref_flux_interp_to_face_dot_ref_normal[istate].resize(n_face_quad_pts_int);
@@ -3185,10 +3165,8 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                 row_index++, column_index++){
 
                 if(Hadamard_rows_sparsity_int[row_index] != iquad_face){
-                    // pcout<<"The interior Hadamard rows sparsity pattern does not match."<<std::endl;
-                    // pcout<<"Hadamard_rows_sparsity_int["<<row_index<<"]: "<<Hadamard_rows_sparsity_int[row_index]<<std::endl;
-                    // pcout<<"iquad_face: "<<iquad_face<<std::endl;
-                    // std::abort();
+                    pcout<<"The interior Hadamard rows sparsity pattern does not match."<<std::endl;
+                    std::abort();
                 }
 
                 const unsigned int iquad_vol = Hadamard_columns_sparsity_int[row_index];//extract flux_quad pt that corresponds to a non-zero entry for Hadamard product.
@@ -3230,15 +3208,8 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                 row_index++, column_index++){
 
                 if(Hadamard_rows_sparsity_ext[row_index] != iquad_face){
-                    // pcout<<"The exterior Hadamard rows sparsity pattern does not match."<<std::endl;
-                    // pcout<<"n_face_quad_pts: "<<n_face_quad_pts<<std::endl;
-                    // pcout<<"Poly_degree_int: "<<poly_degree_int<<std::endl;
-                    // pcout<<"n_quad_pts_1D_int: "<<n_quad_pts_1D_int<<std::endl;
-                    // pcout<<"Poly_degree_ext: "<<poly_degree_ext<<std::endl;
-                    // pcout<<"n_quad_pts_1D_ext: "<<n_quad_pts_1D_ext<<std::endl;
-                    // pcout<<"Hadamard_rows_sparsity_int["<<row_index<<"]: "<<Hadamard_rows_sparsity_int[row_index]<<std::endl;
-                    // pcout<<"iquad_face: "<<iquad_face<<std::endl;
-                    // std::abort();
+                    pcout<<"The exterior Hadamard rows sparsity pattern does not match."<<std::endl;
+                    std::abort();
                 }
 
                 const unsigned int iquad_vol = Hadamard_columns_sparsity_ext[row_index];//extract flux_quad pt that corresponds to a non-zero entry for Hadamard product.
@@ -3487,10 +3458,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected;
     std::array<std::vector<real>,nstate> diss_auxi_num_flux_dot_n_projected;
     if(poly_degree_int != poly_degree_ext){
-        // pcout<<"\ncurrent_cell_index: "<<current_cell_index<<std::endl;
-        // pcout<<"poly_degree_int: "<<poly_degree_int<<". n_face_quad_pts_int:"<<n_face_quad_pts_int<<std::endl;
-        // pcout<<"neighbor_cell_index: "<<neighbor_cell_index<<std::endl;
-        // pcout<<"poly_degree_ext: "<<poly_degree_ext<<". n_face_quad_pts_ext:"<<n_face_quad_pts_ext<<std::endl;
         if(poly_degree_int>poly_degree_ext){
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
             // dealii::QGaussLobatto<1> quad_high_1D(poly_degree_int + 1);
@@ -3498,19 +3465,11 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             dealii::QGauss<1> quad_high_1D(poly_degree_int + 1);
             dealii::QGauss<1> quad_low_1D (poly_degree_ext + 1);
 
-            // pcout<<"\nquad_high_1D.size():"<<quad_high_1D.size()<<std::endl;
-            // pcout<<"quad_low_1D.size():"<<quad_low_1D.size()<<std::endl;
-            // pcout<<"n_min_face_quad_pts:"<<n_min_face_quad_pts<<std::endl;
-
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D, quad_low_1D, neighbor_iface);
             for(int istate=0; istate<nstate; istate++){
                 conv_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
                 diss_auxi_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
             
-                // projection_oper.matrix_vector_mult_1D(
-                //     conv_num_flux_dot_n[istate],              // size n_q_high
-                //     conv_num_flux_dot_n_projected[istate],    // size n_q_low
-                //     projection_oper.oneD_surf_operator[iface]);
                 const auto &P = projection_oper.oneD_surf_operator[neighbor_iface];
 
                 for (unsigned int i = 0; i < P.m(); ++i)
@@ -3520,23 +3479,12 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
                     for (unsigned int j = 0; j < P.n(); ++j)
                     {
-                        //pcout<<"P("<<i<<","<<j<<"):"<<P(i,j)<<std::endl;
                         conv_num_flux_dot_n_projected[istate][i] +=
                             P(i,j) * conv_num_flux_dot_n[istate][j];
                         diss_auxi_num_flux_dot_n_projected[istate][i] +=
                             P(i,j) * diss_auxi_num_flux_dot_n[istate][j];
                     }
                 }
-
-                // // convective numerical flux
-                // pcout<<"\n\nconv_num_flux_dot_n["<<istate<<"].size(): "<<conv_num_flux_dot_n[istate].size()<<std::endl;
-                // for (unsigned int iquad=0; iquad<n_face_quad_pts_int; ++iquad) {
-                //     pcout<<"conv_num_flux_dot_n["<<istate<<"]["<<iquad<<"]: "<<conv_num_flux_dot_n[istate][iquad]<<std::endl;
-                // }
-                // pcout<<"\nconv_num_flux_dot_n_projected["<<istate<<"].size(): "<<conv_num_flux_dot_n_projected[istate].size()<<std::endl;
-                // for (unsigned int iquad=0; iquad<n_face_quad_pts_ext; ++iquad) {
-                //     pcout<<"conv_num_flux_dot_n_projected["<<istate<<"]["<<iquad<<"]: "<<conv_num_flux_dot_n_projected[istate][iquad]<<std::endl;
-                // }
             }
         }else{
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
@@ -3558,23 +3506,12 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
                     for (unsigned int j = 0; j < P.n(); ++j)
                     {
-                        //pcout<<"P("<<i<<","<<j<<"):"<<P(i,j)<<std::endl;
                         conv_num_flux_dot_n_projected[istate][i] +=
                             P(i,j) * conv_num_flux_dot_n[istate][j];
                         diss_auxi_num_flux_dot_n_projected[istate][i] +=
                             P(i,j) * diss_auxi_num_flux_dot_n[istate][j];
                     }
                 }
-
-                // // convective numerical flux
-                // pcout<<"\nconv_num_flux_dot_n["<<istate<<"].size(): "<<conv_num_flux_dot_n[istate].size()<<std::endl;
-                // for (unsigned int iquad=0; iquad<n_face_quad_pts_ext; ++iquad) {
-                //     pcout<<"conv_num_flux_dot_n["<<istate<<"]["<<iquad<<"]: "<<conv_num_flux_dot_n[istate][iquad]<<std::endl;
-                // }
-                // pcout<<"\nconv_num_flux_dot_n_projected["<<istate<<"].size(): "<<conv_num_flux_dot_n_projected[istate].size()<<std::endl;
-                // for (unsigned int iquad=0; iquad<n_face_quad_pts_int; ++iquad) {
-                //     pcout<<"conv_num_flux_dot_n_projected["<<istate<<"]["<<iquad<<"]: "<<conv_num_flux_dot_n_projected[istate][iquad]<<std::endl;
-                // }
             }
         }
     }else{
@@ -3645,14 +3582,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                     soln_basis_int.oneD_vol_operator,
                                                     true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
         }
-        // // convective numerical flux
-        // soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-        //                                         iface, n_quad_pts_1D_int,
-        //                                         conv_num_flux_dot_n[istate], 
-        //                                         surf_quad_weights_max, rhs_int, 
-        //                                         soln_basis_int_interpolated.oneD_surf_operator, 
-        //                                         soln_basis_int_interpolated.oneD_vol_operator,
-        //                                         true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
 
         if(poly_degree_int<poly_degree_ext){
             // dissipative numerical flux
@@ -3664,7 +3593,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                     soln_basis_int.oneD_vol_operator,
                                                     true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
         }else{
-                    // dissipative numerical flux
+            // dissipative numerical flux
             soln_basis_int.inner_product_surface_1D(face_orientation_int, 
                                                     iface, n_quad_pts_1D_int,
                                                     diss_auxi_num_flux_dot_n[istate], 
@@ -3673,15 +3602,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                     soln_basis_int.oneD_vol_operator,
                                                     true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
         }
-        // // dissipative numerical flux
-        // soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-        //                                         iface, n_quad_pts_1D_int,
-        //                                         diss_auxi_num_flux_dot_n[istate], 
-        //                                         surf_quad_weights_max, rhs_int, 
-        //                                         soln_basis_int_interpolated.oneD_surf_operator, 
-        //                                         soln_basis_int_interpolated.oneD_vol_operator,
-        //                                         true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
-
 
         for(unsigned int ishape=0; ishape<n_shape_fns_int; ishape++){
             local_rhs_int_cell(istate*n_shape_fns_int + ishape) += rhs_int[ishape];
@@ -3709,14 +3629,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
         }
         else 
         {
-            // pcout<<"\nconv_ext_vol_ref_flux_interp_to_face_dot_ref_normal: "<<std::endl;
-            // pcout<<"conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal["<<istate<<"].size(): "<<conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal[istate].size()<<std::endl;
-            //pcout<<"surf_quad_weights_ext.size(): "<<surf_quad_weights_ext.size()<<std::endl;
-            // pcout<<"soln_basis_ext.oneD_surf_operator[0].m(): "<<soln_basis_ext.oneD_surf_operator[0].m()<<". flux_basis_int.oneD_surf_operator[0].n(): "<<soln_basis_ext.oneD_surf_operator[0].n()<<std::endl;
-            // pcout<<"soln_basis_ext.oneD_vol_operator.m(): "<<soln_basis_ext.oneD_vol_operator.m()<<". flux_basis_int.oneD_vol_operator.n(): "<<soln_basis_ext.oneD_vol_operator.n()<<std::endl;
-            // for(unsigned int iquad=0; iquad<n_max_face_quad_pts; iquad++){
-            //     pcout<<"conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal["<<istate<<"]: "<<conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal[istate][iquad]<<std::endl;
-            // }
             soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                     neighbor_iface, n_quad_pts_1D_ext,
                                                     conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal[istate], 
@@ -3724,19 +3636,8 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                     soln_basis_ext.oneD_surf_operator, 
                                                     soln_basis_ext.oneD_vol_operator,
                                                     false, 1.0);//adding false
-
-            // if(neighbor_cell_index == 1){
-            //     for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
-            //         pcout<<"rhs_ext["<<ishape<<"] (conv_ext_vol_ref_flux_interp_to_face_dot_ref_normal): "<<rhs_ext[ishape]<<std::endl;
-            //     }
-            // }
         }
         // dissipative flux
-        // pcout<<"\ndiffusive_ext_vol_ref_flux_interp_to_face_dot_ref_normal: "<<std::endl;
-        // pcout<<"diffusive_ext_vol_ref_flux_interp_to_face_dot_ref_normal["<<istate<<"].size(): "<<diffusive_ext_vol_ref_flux_interp_to_face_dot_ref_normal[istate].size()<<std::endl;
-        // pcout<<"surf_quad_weights_ext.size(): "<<surf_quad_weights_ext.size()<<std::endl;
-        // pcout<<"soln_basis_ext.oneD_surf_operator[0].m(): "<<soln_basis_ext.oneD_surf_operator[0].m()<<". flux_basis_int.oneD_surf_operator[0].n(): "<<soln_basis_ext.oneD_surf_operator[0].n()<<std::endl;
-        // pcout<<"soln_basis_ext.oneD_vol_operator.m(): "<<soln_basis_ext.oneD_vol_operator.m()<<". flux_basis_int.oneD_vol_operator.n(): "<<soln_basis_ext.oneD_vol_operator.n()<<std::endl;
         soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                 neighbor_iface, n_quad_pts_1D_ext,
                                                 diffusive_ext_vol_ref_flux_interp_to_face_dot_ref_normal[istate], 
@@ -3745,51 +3646,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                 soln_basis_ext.oneD_vol_operator,
                                                 true, 1.0);//adding=true
         //convective numerical flux
-        // pcout<<"\nconv_num_flux_dot_n: "<<std::endl;
-        // pcout<<"conv_num_flux_dot_n["<<istate<<"].size(): "<<conv_num_flux_dot_n[istate].size()<<std::endl;
-        // //pcout<<"conv_num_flux_dot_n_projected["<<istate<<"].size(): "<<conv_num_flux_dot_n_projected[istate].size()<<std::endl;
-        // // pcout<<"surf_quad_weights_ext.size(): "<<surf_quad_weights_ext.size()<<std::endl;
-        // // pcout<<"soln_basis_ext.oneD_surf_operator[0].m(): "<<soln_basis_ext.oneD_surf_operator[0].m()<<". soln_basis_ext.oneD_surf_operator[0].n(): "<<soln_basis_ext.oneD_surf_operator[0].n()<<std::endl;
-        // // pcout<<"soln_basis_ext.oneD_vol_operator.m(): "<<soln_basis_ext.oneD_vol_operator.m()<<". soln_basis_ext.oneD_vol_operator.n(): "<<soln_basis_ext.oneD_vol_operator.n()<<std::endl;
-        // pcout<<"surf_quad_weights_max.size(): "<<surf_quad_weights_max.size()<<std::endl;
-        // pcout<<"soln_basis_ext_interpolated.oneD_surf_operator[0].m(): "<<soln_basis_ext_interpolated.oneD_surf_operator[0].m()<<". soln_basis_ext_interpolated.oneD_surf_operator[0].n(): "<<soln_basis_ext_interpolated.oneD_surf_operator[0].n()<<std::endl;
-        // for(unsigned int i=0; i<soln_basis_ext_interpolated.oneD_surf_operator[0].m(); i++){
-        //     pcout<<"soln_basis_ext_interpolated.oneD_surf_operator[0]["<<i<<"]: "<<soln_basis_ext_interpolated.oneD_surf_operator[0][i][0]<<" "<<soln_basis_ext_interpolated.oneD_surf_operator[0][i][1]<<std::endl;
-        // }
-        // pcout<<"soln_basis_ext_interpolated.oneD_surf_operator[1].m(): "<<soln_basis_ext_interpolated.oneD_surf_operator[1].m()<<". soln_basis_ext_interpolated.oneD_surf_operator[1].n(): "<<soln_basis_ext_interpolated.oneD_surf_operator[1].n()<<std::endl;
-        // for(unsigned int i=0; i<soln_basis_ext_interpolated.oneD_surf_operator[1].m(); i++){
-        //     pcout<<"soln_basis_ext_interpolated.oneD_surf_operator[1]["<<i<<"]: "<<soln_basis_ext_interpolated.oneD_surf_operator[1][i][0]<<" "<<soln_basis_ext_interpolated.oneD_surf_operator[1][i][1]<<std::endl;
-        // }
-        // pcout<<"soln_basis_ext_interpolated.oneD_vol_operator.m(): "<<soln_basis_ext_interpolated.oneD_vol_operator.m()<<". soln_basis_ext_interpolated.oneD_vol_operator.n(): "<<soln_basis_ext_interpolated.oneD_vol_operator.n()<<std::endl;        
-        // for(unsigned int i=0; i<soln_basis_ext_interpolated.oneD_vol_operator.m(); i++){
-        //     for(unsigned int j=0; j<soln_basis_ext_interpolated.oneD_vol_operator.n(); j++){
-        //         pcout<<"soln_basis_ext_interpolated.oneD_vol_operator["<<i<<"]["<<j<<"]: "<<soln_basis_ext_interpolated.oneD_vol_operator[i][j]<<std::endl;
-        //     }
-        // }
-        // for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
-        //     pcout<<"rhs_ext["<<ishape<<"]: "<<rhs_ext[ishape]<<std::endl;
-        // }
-        // for(unsigned int iquad=0; iquad<n_max_face_quad_pts; iquad++){
-        //     pcout<<"conv_num_flux_dot_n["<<istate<<"]: "<<conv_num_flux_dot_n[istate][iquad]<<std::endl;
-        // }
-        // for(unsigned int iquad=0; iquad<n_max_face_quad_pts; iquad++){
-        //     pcout<<"surf_quad_weights_max["<<iquad<<"]: "<<surf_quad_weights_max[iquad]<<std::endl;
-        // }
-        // soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
-        //                                         neighbor_iface, n_quad_pts_1D_int,
-        //                                         conv_num_flux_dot_n[istate], 
-        //                                         surf_quad_weights_ext, rhs_ext, 
-        //                                         soln_basis_ext_interpolated.oneD_surf_operator, 
-        //                                         soln_basis_ext_interpolated.oneD_vol_operator,
-        //                                         true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-        // if(neighbor_cell_index == 1){
-            // for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
-            //     pcout<<"rhs_ext["<<ishape<<"] (+conv_num_flux_dot_n): "<<rhs_ext[ishape]<<std::endl;
-            // }
-            // for(unsigned int iquad=0; iquad<n_face_quad_pts_int; iquad++){
-            //     pcout<<"conv_num_flux_dot_n["<<istate<<"]: "<<conv_num_flux_dot_n[istate][iquad]<<std::endl;
-            // }
-        // }
         if(poly_degree_int>poly_degree_ext){
             soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                     neighbor_iface, n_quad_pts_1D_int,
@@ -3807,22 +3663,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                         soln_basis_ext.oneD_vol_operator,
                                         true, 1.0);//adding=true, scaled by fac
         }
-        // //dissipative numerical flux
-        // pcout<<"\ndiss_auxi_num_flux_dot_n: "<<std::endl;
-        // pcout<<"diss_auxi_num_flux_dot_n["<<istate<<"].size(): "<<diss_auxi_num_flux_dot_n[istate].size()<<std::endl;
-        // pcout<<"diss_auxi_num_flux_dot_n_projected["<<istate<<"].size(): "<<diss_auxi_num_flux_dot_n_projected[istate].size()<<std::endl;
-        // pcout<<"surf_quad_weights_ext.size(): "<<surf_quad_weights_ext.size()<<std::endl;
-        // pcout<<"soln_basis_ext.oneD_surf_operator[0].m(): "<<soln_basis_ext.oneD_surf_operator[0].m()<<". soln_basis_ext.oneD_surf_operator[0].n(): "<<soln_basis_ext.oneD_surf_operator[0].n()<<std::endl;
-        // pcout<<"soln_basis_ext.oneD_vol_operator.m(): "<<soln_basis_ext.oneD_vol_operator.m()<<". soln_basis_ext.oneD_vol_operator.n(): "<<soln_basis_ext.oneD_vol_operator.n()<<std::endl;
-        
-        
-        // soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
-        //                                         neighbor_iface, n_quad_pts_1D_int,
-        //                                         diss_auxi_num_flux_dot_n[istate], 
-        //                                         surf_quad_weights_max, rhs_ext, 
-        //                                         soln_basis_ext_interpolated.oneD_surf_operator, 
-        //                                         soln_basis_ext_interpolated.oneD_vol_operator,
-        //                                         true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
+
         if(poly_degree_int>poly_degree_ext){
             soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                 neighbor_iface, n_quad_pts_1D_int,
