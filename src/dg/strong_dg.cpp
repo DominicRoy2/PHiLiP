@@ -1629,13 +1629,13 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_strong(
             soln_at_opposite_surf_q[istate].resize(n_face_quad_pts);
             //solve soln at facet cubature nodes
             if(this->wall_model_input_from_second_element) {
-                soln_basis.matrix_vector_mult_surface_1D({true, false, false},
+                soln_basis.matrix_vector_mult_surface_1D(face_orientation,
                                                      neighbor_iface, n_quad_pts_1D,
                                                      neighbor_soln_coeff[istate], soln_at_opposite_surf_q[istate],
                                                      soln_basis.oneD_surf_operator,
                                                      soln_basis.oneD_vol_operator);
             } else {
-                soln_basis.matrix_vector_mult_surface_1D({true, false, false},
+                soln_basis.matrix_vector_mult_surface_1D(face_orientation,
                                                      opposite_iface, n_quad_pts_1D,
                                                      soln_coeff[istate], soln_at_opposite_surf_q[istate],
                                                      soln_basis.oneD_surf_operator,
@@ -2212,6 +2212,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_boundary_term_strong(
         this->pde_physics_double->boundary_face_values_viscous_flux (boundary_id, surf_flux_node, unit_phys_normal_int, soln_state, aux_soln_state, filtered_soln_state, filtered_aux_soln_state, soln_boundary, grad_soln_boundary);
         std::array<real,nstate> diss_auxi_num_flux_dot_n_at_q;
         if(this->using_wall_model && ((boundary_id == 1001) || (boundary_id == 1006))) {
+            //pcout<<"Computing dissipative_flux_dot_normal using wall model"<<std::endl;
             diss_auxi_num_flux_dot_n_at_q = this->pde_physics_double->dissipative_flux_dot_normal(
                 opposite_surf_soln_state, aux_soln_state, 
                 filtered_soln_state, filtered_aux_soln_state,

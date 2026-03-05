@@ -298,7 +298,7 @@ public:
     double matching_surface_jac_det_tolerance;
 
     /// Flag for using wall model (initialized as false)
-    bool using_wall_model = false;
+    bool using_wall_model = true;
 
     /// Flag for using second element as wall model input; if false, uses buffer (i.e. wall-adjacent) element
     bool wall_model_input_from_second_element;

@@ -1193,13 +1193,24 @@ std::array<real,nstate> NavierStokes<dim,nstate,real>
         /** If adiabatic on either slip (1001) or no-slip (1006) wall BCs */
         // adiabatic boundary
         // --> Modify viscous flux such that normal_vector dot gradient of temperature must be zero
-        dissipative_flux_dot_normal = this->dissipative_flux_dot_normal_on_adiabatic_boundary (
-                                                           solution,
-                                                           solution_gradient,
-                                                           filtered_solution,
-                                                           filtered_solution_gradient,
-                                                           cell_index,
-                                                           normal);
+        bool use_wall_model = true;
+        if(use_wall_model == true){
+            dissipative_flux_dot_normal = this->dissipative_flux_dot_normal_on_adiabatic_boundary_wall_model (
+                                                            solution,
+                                                            solution_gradient,
+                                                            filtered_solution,
+                                                            filtered_solution_gradient,
+                                                            cell_index,
+                                                            normal);
+        }else{
+            dissipative_flux_dot_normal = this->dissipative_flux_dot_normal_on_adiabatic_boundary (
+                                                            solution,
+                                                            solution_gradient,
+                                                            filtered_solution,
+                                                            filtered_solution_gradient,
+                                                            cell_index,
+                                                            normal);
+        }
     } else {
         // if not on boundary and for all other types of boundary conditions (including isothermal) --> no change to dissipative flux
         // no change to dissipative flux for BCs that do not impose a condition on the gradient at the boundary
@@ -1267,6 +1278,58 @@ std::array<real,nstate> NavierStokes<dim,nstate,real>
         }
     }
 
+    return dissipative_flux_dot_normal;
+}
+
+template <int dim, int nstate, typename real>
+std::array<real,nstate> NavierStokes<dim,nstate,real>
+::dissipative_flux_dot_normal_on_adiabatic_boundary_wall_model (
+        const std::array<real,nstate> &solution,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> & solution_gradient,
+        const std::array<real,nstate> &/*filtered_solution*/,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> &/*filtered_solution_gradient*/,
+        const dealii::types::global_dof_index /*cell_index*/,
+        const dealii::Tensor<1,dim,real> &normal)
+{
+    /* Input variable 'solution' is actually solution at the wall element opposing face.
+       This means that for a channel flow with a uniform grid, this is solution is 
+       at a distance dy = domain_length_y/(number_of_elements_y_direction) from the wall.
+    */
+
+    // Get the wall parallel velocities; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> velocities_parallel_to_wall = this->template compute_velocities_parallel_to_wall<real>(solution,normal);
+
+    // Get wall tangent vector; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> wall_tangent_vector = this->template compute_wall_tangent_vector_from_velocities_parallel_to_wall<real>(velocities_parallel_to_wall);
+
+    // Get wall parallel velocity component; Frere thesis eq.(2.41)
+    real velocity_parallel_to_wall = 0.0;
+    for (int d=0; d<dim; ++d) {
+        velocity_parallel_to_wall += velocities_parallel_to_wall[d]*wall_tangent_vector[d];
+    }
+
+    WallModel<real> wall_model_look_up_table;
+
+    // Get wall shear stress magnitude from wall model
+    const std::array<real, nstate> primitive_soln = this->template convert_conservative_to_primitive_templated<real>(solution);
+    const real viscosity_coefficient = this->template compute_viscosity_coefficient<real>(primitive_soln);
+    const real density = solution[0];
+    const real wall_shear_stress_magnitude_initial_guess = this->compute_wall_shear_stress (solution, solution_gradient, normal);
+    const real wall_shear_stress_magnitude =
+            wall_model_look_up_table.get_wall_shear_stress_magnitude(
+                    velocity_parallel_to_wall,
+                    this->distance_from_wall_for_wall_model_input_velocity,
+                    viscosity_coefficient,
+                    density,
+                    this->reynolds_number_inf,
+                    wall_shear_stress_magnitude_initial_guess);
+
+    // Compute the dissipative flux dot normal vector; Frere thesis eq.(2.39)
+    std::array<real,nstate> dissipative_flux_dot_normal;    
+    dissipative_flux_dot_normal.fill(0.0); // initialize
+    for (int d=0; d<dim; ++d) {
+        dissipative_flux_dot_normal[1+d] += wall_shear_stress_magnitude * wall_tangent_vector[d]; // Frere thesis eq.(2.39)
+    }
     return dissipative_flux_dot_normal;
 }
 
@@ -1848,6 +1911,8 @@ get_wall_shear_stress_magnitude(
     real y_plus = 0;
 
     std::string wall_model_type = "Lookup_Table";
+
+    //std::cout<<"Computing wall shear stress magnitude from Wall model. Model type: "<<wall_model_type<<". Wall distance: "<<distance<<std::endl;
 
     if(wall_model_type == "Lookup_Table"){
         y_plus = this->interpolate(u_parallel_plus_y_plus,true);

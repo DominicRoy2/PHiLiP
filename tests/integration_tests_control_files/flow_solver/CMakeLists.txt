@@ -64,3 +64,19 @@ add_test(
  WORKING_DIRECTORY ${TEST_OUTPUT_DIR}
 )
 # ----------------------------------------
+
+# =======================================
+# NACA0012 Wall Model Airfoil
+# =======================================
+# ----------------------------------------
+# - References:
+# - (1) Garmann et al.
+# - (2) Galbraith et Visbal
+# ----------------------------------------
+configure_file(unsteady_naca0012_wall_model.prm unsteady_naca0012_wall_model.prm COPYONLY)
+add_test(
+ NAME MPI_3D_NACA0012_WALL_MODEL
+ COMMAND mpirun -np ${MPIMAX} ${EXECUTABLE_OUTPUT_PATH}/PHiLiP_3D -i ${CMAKE_CURRENT_BINARY_DIR}/unsteady_naca0012_wall_model.prm
+ WORKING_DIRECTORY ${TEST_OUTPUT_DIR}
+)
+# ----------------------------------------
