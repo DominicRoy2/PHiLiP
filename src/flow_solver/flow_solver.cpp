@@ -546,8 +546,6 @@ int FlowSolver<dim,nstate>::run() const
         {
             time_step = next_time_step; // update time step
 
-            pcout << "\n\n*** Time step: "<<ode_solver->current_iteration <<  ". Current time: "<< ode_solver->current_time <<"\n\n"<< std::endl;
-
             // check if we need to decrease the time step
             if((ode_solver->current_time+time_step) > final_time && flow_solver_param.end_exactly_at_final_time) {
                 // decrease time step to finish exactly at specified final time
