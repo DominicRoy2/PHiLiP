@@ -8,7 +8,7 @@ set pde_type = euler
 
 # DG formulation
 set use_weak_form = false
-set use_split_form = false
+set use_split_form = true
 set flux_nodes_type = GLL
 set overintegration = 0
 set do_renumber_dofs = false 
@@ -21,7 +21,7 @@ set check_same_coords_in_weak_dg = false
 set enable_higher_order_vtk_output = true
 
 # numerical fluxes
-set conv_num_flux = roe #two_point_flux
+set conv_num_flux = two_point_flux
 set two_point_num_flux_type = Ra
 
 subsection mesh adaptation
