@@ -292,16 +292,14 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_and_build_operators(
             mapping_support_points_neigh,
             mapping_basis,
             this->all_parameters->use_invariant_curl_form);
-        //if poly_degree_ext>poly_degree_int, need high-order metrics from ext cell
-        if(poly_degree_int < poly_degree_ext){
-            metric_oper_ext.build_facet_metric_operators(
-                neighbor_iface,
-                this->face_quadrature_collection[poly_degree_ext].size(),
-                n_grid_nodes,
-                mapping_support_points_neigh,
-                mapping_basis,
-                this->all_parameters->use_invariant_curl_form);
-        }
+        //Need high-order metrics from ext cell for Hadamard (aslo for metrics if poly_degree_ext > poly_degree_int)
+        metric_oper_ext.build_facet_metric_operators(
+            neighbor_iface,
+            this->face_quadrature_collection[poly_degree_ext].size(),
+            n_grid_nodes,
+            mapping_support_points_neigh,
+            mapping_basis,
+            this->all_parameters->use_invariant_curl_form);
     }
 
 
@@ -3139,32 +3137,28 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             surface_ref_2pt_flux_int[istate].reinit(n_face_quad_pts_int, n_quad_pts_1D_int);
             surface_ref_2pt_flux_ext[istate].reinit(n_face_quad_pts_ext, n_quad_pts_1D_ext);
         }
-        for(unsigned int iquad_face=0; iquad_face<n_face_quad_pts_int; iquad_face++){
+        for(unsigned int iquad_face_int=0; iquad_face_int<n_face_quad_pts_int; iquad_face_int++){
             dealii::Tensor<2,dim,real> metric_cofactor_surf;
             for(int idim=0; idim<dim; idim++){
                 for(int jdim=0; jdim<dim; jdim++){
-                    metric_cofactor_surf[idim][jdim] = metric_oper_int.metric_cofactor_surf[idim][jdim][iquad_face];
+                    metric_cofactor_surf[idim][jdim] = metric_oper_int.metric_cofactor_surf[idim][jdim][iquad_face_int];
                 }
             }
              
             //Compute the conservative values on the facet from the interpolated entorpy variables.
             std::array<real,nstate> entropy_var_face_int;
-            std::array<real,nstate> entropy_var_face_ext;
             for(int istate=0; istate<nstate; istate++){
-                entropy_var_face_int[istate] = projected_entropy_var_surf_int[istate][iquad_face];
-                entropy_var_face_ext[istate] = projected_entropy_var_surf_ext[istate][iquad_face];
+                entropy_var_face_int[istate] = projected_entropy_var_surf_int[istate][iquad_face_int];
             }
             std::array<real,nstate> soln_state_face_int;
             soln_state_face_int = this->pde_physics_double->compute_conservative_variables_from_entropy_variables (entropy_var_face_int);
-            std::array<real,nstate> soln_state_face_ext;
-            soln_state_face_ext = this->pde_physics_double->compute_conservative_variables_from_entropy_variables (entropy_var_face_ext);
 
             //only do the n_quad_1D vol points that give non-zero entries from Hadamard product.
-            for(unsigned int row_index = iquad_face * n_quad_pts_1D_int, column_index = 0; 
+            for(unsigned int row_index = iquad_face_int * n_quad_pts_1D_int, column_index = 0; 
                 column_index < n_quad_pts_1D_int;
                 row_index++, column_index++){
 
-                if(Hadamard_rows_sparsity_int[row_index] != iquad_face){
+                if(Hadamard_rows_sparsity_int[row_index] != iquad_face_int){
                     pcout<<"The interior Hadamard rows sparsity pattern does not match."<<std::endl;
                     std::abort();
                 }
@@ -3200,14 +3194,32 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                         0.5*(metric_cofactor_surf + metric_cofactor_vol_int),
                         conv_ref_flux_2pt);
                     //only store the dim not zero in reference space bc dot product with unit ref normal later.
-                    surface_ref_2pt_flux_int[istate][iquad_face][column_index] = conv_ref_flux_2pt[dim_not_zero_int];
+                    surface_ref_2pt_flux_int[istate][iquad_face_int][column_index] = conv_ref_flux_2pt[dim_not_zero_int];
                 }
             }
-            for(unsigned int row_index = iquad_face * n_quad_pts_1D_ext, column_index = 0; 
+        }
+        for(unsigned int iquad_face_ext=0; iquad_face_ext<n_face_quad_pts_ext; iquad_face_ext++){
+            dealii::Tensor<2,dim,real> metric_cofactor_surf;
+            for(int idim=0; idim<dim; idim++){
+                for(int jdim=0; jdim<dim; jdim++){
+                    metric_cofactor_surf[idim][jdim] = metric_oper_ext.metric_cofactor_surf[idim][jdim][iquad_face_ext];
+                }
+            }
+             
+            //Compute the conservative values on the facet from the interpolated entorpy variables.
+            std::array<real,nstate> entropy_var_face_ext;
+            for(int istate=0; istate<nstate; istate++){
+                entropy_var_face_ext[istate] = projected_entropy_var_surf_ext[istate][iquad_face_ext];
+            }
+
+            std::array<real,nstate> soln_state_face_ext;
+            soln_state_face_ext = this->pde_physics_double->compute_conservative_variables_from_entropy_variables (entropy_var_face_ext);
+            
+            for(unsigned int row_index = iquad_face_ext * n_quad_pts_1D_ext, column_index = 0; 
                 column_index < n_quad_pts_1D_ext;
                 row_index++, column_index++){
 
-                if(Hadamard_rows_sparsity_ext[row_index] != iquad_face){
+                if(Hadamard_rows_sparsity_ext[row_index] != iquad_face_ext){
                     pcout<<"The exterior Hadamard rows sparsity pattern does not match."<<std::endl;
                     std::abort();
                 }
@@ -3239,7 +3251,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                         0.5*(metric_cofactor_surf + metric_cofactor_vol_ext),
                         conv_ref_flux_2pt);
                     //only store the dim not zero in reference space bc dot product with unit ref normal later.
-                    surface_ref_2pt_flux_ext[istate][iquad_face][column_index] = conv_ref_flux_2pt[dim_not_zero_ext];
+                    surface_ref_2pt_flux_ext[istate][iquad_face_ext][column_index] = conv_ref_flux_2pt[dim_not_zero_ext];
                 }
             }
         }
@@ -3284,23 +3296,25 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             surf_vol_ref_2pt_flux_interp_vol_int[istate].resize(n_quad_pts_vol_int);
             surf_vol_ref_2pt_flux_interp_vol_ext[istate].resize(n_quad_pts_vol_ext);
          
-            for(unsigned int iface_quad=0; iface_quad<n_face_quad_pts_int; iface_quad++){
+            for(unsigned int iface_quad_int=0; iface_quad_int<n_face_quad_pts_int; iface_quad_int++){
                 for(unsigned int iquad_int=0; iquad_int<n_quad_pts_1D_int; iquad_int++){
-                    surf_vol_ref_2pt_flux_interp_surf_int[istate][iface_quad] 
-                        -= surface_ref_2pt_flux_int_Hadamard_with_surf_oper[iface_quad][iquad_int]
+                    surf_vol_ref_2pt_flux_interp_surf_int[istate][iface_quad_int] 
+                        -= surface_ref_2pt_flux_int_Hadamard_with_surf_oper[iface_quad_int][iquad_int]
                         * unit_ref_normal_int[dim_not_zero_int];
-                    const unsigned int column_index = iface_quad * n_quad_pts_1D_int + iquad_int;
+                    const unsigned int column_index = iface_quad_int * n_quad_pts_1D_int + iquad_int;
                     surf_vol_ref_2pt_flux_interp_vol_int[istate][Hadamard_columns_sparsity_int[column_index]] 
-                        += surface_ref_2pt_flux_int_Hadamard_with_surf_oper[iface_quad][iquad_int]
+                        += surface_ref_2pt_flux_int_Hadamard_with_surf_oper[iface_quad_int][iquad_int]
                         * unit_ref_normal_int[dim_not_zero_int];
                 }
+            }
+            for(unsigned int iface_quad_ext=0; iface_quad_ext<n_face_quad_pts_ext; iface_quad_ext++){
                 for(unsigned int iquad_ext=0; iquad_ext<n_quad_pts_1D_ext; iquad_ext++){
-                    surf_vol_ref_2pt_flux_interp_surf_ext[istate][iface_quad] 
-                        -= surface_ref_2pt_flux_ext_Hadamard_with_surf_oper[iface_quad][iquad_ext]
+                    surf_vol_ref_2pt_flux_interp_surf_ext[istate][iface_quad_ext] 
+                        -= surface_ref_2pt_flux_ext_Hadamard_with_surf_oper[iface_quad_ext][iquad_ext]
                         * (unit_ref_normal_ext[dim_not_zero_ext]);
-                    const unsigned int column_index = iface_quad * n_quad_pts_1D_ext + iquad_ext;
+                    const unsigned int column_index = iface_quad_ext * n_quad_pts_1D_ext + iquad_ext;
                     surf_vol_ref_2pt_flux_interp_vol_ext[istate][Hadamard_columns_sparsity_ext[column_index]] 
-                        += surface_ref_2pt_flux_ext_Hadamard_with_surf_oper[iface_quad][iquad_ext]
+                        += surface_ref_2pt_flux_ext_Hadamard_with_surf_oper[iface_quad_ext][iquad_ext]
                         * (unit_ref_normal_ext[dim_not_zero_ext]);
                 }
             }
@@ -3328,6 +3342,21 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                             soln_coeff_ext[istate], soln_at_surf_q_ext[istate],
                                                             soln_basis_ext_interpolated.oneD_surf_operator,
                                                             soln_basis_ext_interpolated.oneD_vol_operator);
+                
+                if(this->all_parameters->use_split_form || this->all_parameters->use_curvilinear_split_form){
+                    std::vector<real> entropy_var_coeff_ext(n_shape_fns_ext);
+                    soln_basis_projection_oper_ext.matrix_vector_mult_1D(entropy_var_vol_ext[istate],
+                                                             entropy_var_coeff_ext,
+                                                             soln_basis_projection_oper_ext.oneD_vol_operator);
+
+                    projected_entropy_var_surf_ext_corrected[istate].resize(n_max_face_quad_pts);
+                    soln_basis_ext.matrix_vector_mult_surface_1D(face_orientation_ext, 
+                                                neighbor_iface, n_quad_pts_1D_ext,
+                                                entropy_var_coeff_ext, 
+                                                projected_entropy_var_surf_ext_corrected[istate],
+                                                soln_basis_ext_interpolated.oneD_surf_operator,
+                                                soln_basis_ext_interpolated.oneD_vol_operator);
+                }
 
             }
         }else{
@@ -3340,7 +3369,21 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                             soln_coeff_int[istate], soln_at_surf_q_int[istate],
                                                             soln_basis_int_interpolated.oneD_surf_operator,
                                                             soln_basis_int_interpolated.oneD_vol_operator);
-
+        
+                if(this->all_parameters->use_split_form || this->all_parameters->use_curvilinear_split_form){
+                    std::vector<real> entropy_var_coeff_int(n_shape_fns_int);
+                    soln_basis_projection_oper_int.matrix_vector_mult_1D(entropy_var_vol_int[istate],
+                                                                        entropy_var_coeff_int,
+                                                                        soln_basis_projection_oper_int.oneD_vol_operator);
+                                
+                    projected_entropy_var_surf_int_corrected[istate].resize(n_max_face_quad_pts);
+                    soln_basis_int.matrix_vector_mult_surface_1D(face_orientation_int, 
+                                                iface, n_quad_pts_1D_int,
+                                                entropy_var_coeff_int, 
+                                                projected_entropy_var_surf_int_corrected[istate],
+                                                soln_basis_int_interpolated.oneD_surf_operator,
+                                                soln_basis_int_interpolated.oneD_vol_operator);
+                }
             }
         }
     }
