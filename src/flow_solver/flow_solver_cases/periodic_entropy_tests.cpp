@@ -56,7 +56,7 @@ double PeriodicEntropyTests<dim, nstate>::compute_integrated_quantities(DGBase<d
     // Check that poly_degree is uniform everywhere
     if (dg.get_max_fe_degree() != dg.get_min_fe_degree()) {
         // Note: This function may have issues with nonuniform p. Should test in debug mode if developing in the future.
-        this->pcout << "ERROR: compute_integrated_quantities() is untested for nonuniform p. Aborting..." << std::endl;
+        //this->pcout << "ERROR: compute_integrated_quantities() is untested for nonuniform p. Aborting..." << std::endl;
         //std::abort();
     }
 

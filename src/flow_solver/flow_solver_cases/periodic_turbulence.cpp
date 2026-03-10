@@ -416,34 +416,56 @@ void PeriodicTurbulence<dim, nstate>::compute_and_update_integrated_quantities(D
     int overintegrate = 10;
 
     // Set the quadrature of size dim and 1D for sum-factorization.
-    dealii::QGauss<dim> quad_extra(dg.initial_degree+1+overintegrate);
-    dealii::QGauss<1> quad_extra_1D(dg.initial_degree+1+overintegrate);
+    dealii::QGauss<dim> quad_extra(dg.max_degree+1+overintegrate);
+    dealii::QGauss<1> quad_extra_1D(dg.max_degree+1+overintegrate);
 
     const unsigned int n_quad_pts = quad_extra.size();
     const unsigned int grid_degree = dg.high_order_grid->fe_system.tensor_degree();
-    const unsigned int poly_degree = dg.initial_degree;
-    // Construct the basis functions and mapping shape functions.
-    OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
-    OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
-    // Build basis function volume operator and gradient operator from 1D finite element for 1 state.
-    soln_basis.build_1D_volume_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
-    soln_basis.build_1D_gradient_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
-    // Build mapping shape functions operators using the oneD high_ordeR_grid finite element
-    mapping_basis.build_1D_shape_functions_at_grid_nodes(dg.high_order_grid->oneD_fe_system, dg.high_order_grid->oneD_grid_nodes);
-    mapping_basis.build_1D_shape_functions_at_flux_nodes(dg.high_order_grid->oneD_fe_system, quad_extra_1D, dg.oneD_face_quadrature);
-    const std::vector<double> &quad_weights = quad_extra.get_weights();
-    // If in the future we need the physical quadrature node location, turn these flags to true and the constructor will
-    // automatically compute it for you. Currently set to false as to not compute extra unused terms.
-    const bool store_vol_flux_nodes = false;//currently doesn't need the volume physical nodal position
-    const bool store_surf_flux_nodes = false;//currently doesn't need the surface physical nodal position
+    // // const unsigned int poly_degree = dg.initial_degree;
+    // // Construct the basis functions and mapping shape functions.
+    // OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
+    // OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
+    // // Build basis function volume operator and gradient operator from 1D finite element for 1 state.
+    // soln_basis.build_1D_volume_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+    // soln_basis.build_1D_gradient_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+    // // Build mapping shape functions operators using the oneD high_ordeR_grid finite element
+    // mapping_basis.build_1D_shape_functions_at_grid_nodes(dg.high_order_grid->oneD_fe_system, dg.high_order_grid->oneD_grid_nodes);
+    // mapping_basis.build_1D_shape_functions_at_flux_nodes(dg.high_order_grid->oneD_fe_system, quad_extra_1D, dg.oneD_face_quadrature);
+    // const std::vector<double> &quad_weights = quad_extra.get_weights();
+    // // If in the future we need the physical quadrature node location, turn these flags to true and the constructor will
+    // // automatically compute it for you. Currently set to false as to not compute extra unused terms.
+    // const bool store_vol_flux_nodes = false;//currently doesn't need the volume physical nodal position
+    // const bool store_surf_flux_nodes = false;//currently doesn't need the surface physical nodal position
 
-    const unsigned int n_dofs = dg.fe_collection[poly_degree].n_dofs_per_cell();
-    const unsigned int n_shape_fns = n_dofs / nstate;
-    std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs);
+    // const unsigned int n_dofs = dg.fe_collection[poly_degree].n_dofs_per_cell();
+    // const unsigned int n_shape_fns = n_dofs / nstate;
+    // std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs);
     auto metric_cell = dg.high_order_grid->dof_handler_grid.begin_active();
     // Changed for loop to update metric_cell.
     for (auto cell = dg.dof_handler.begin_active(); cell!= dg.dof_handler.end(); ++cell, ++metric_cell) {
         if (!cell->is_locally_owned()) continue;
+        
+        const int i_fele = cell->active_fe_index();
+        const unsigned int poly_degree = i_fele;
+
+        // Construct the basis functions and mapping shape functions.
+        OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, grid_degree); 
+        OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, grid_degree);
+        // Build basis function volume operator and gradient operator from 1D finite element for 1 state.
+        soln_basis.build_1D_volume_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+        soln_basis.build_1D_gradient_operator(dg.oneD_fe_collection_1state[poly_degree], quad_extra_1D);
+        // Build mapping shape functions operators using the oneD high_ordeR_grid finite element
+        mapping_basis.build_1D_shape_functions_at_grid_nodes(dg.high_order_grid->oneD_fe_system, dg.high_order_grid->oneD_grid_nodes);
+        mapping_basis.build_1D_shape_functions_at_flux_nodes(dg.high_order_grid->oneD_fe_system, quad_extra_1D, dg.oneD_face_quadrature);
+        const std::vector<double> &quad_weights = quad_extra.get_weights();
+        // If in the future we need the physical quadrature node location, turn these flags to true and the constructor will
+        // automatically compute it for you. Currently set to false as to not compute extra unused terms.
+        const bool store_vol_flux_nodes = false;//currently doesn't need the volume physical nodal position
+        const bool store_surf_flux_nodes = false;//currently doesn't need the surface physical nodal position
+
+        const unsigned int n_dofs = dg.fe_collection[poly_degree].n_dofs_per_cell();
+        const unsigned int n_shape_fns = n_dofs / nstate;
+        std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs);
         cell->get_dof_indices (dofs_indices);
 
         // We first need to extract the mapping support points (grid nodes) from high_order_grid.
@@ -632,35 +654,59 @@ double PeriodicTurbulence<dim, nstate>::get_numerical_entropy(
         const std::shared_ptr <DGBase<dim, double>> dg
         ) const
 {
-    const double poly_degree = this->all_param.flow_solver_param.poly_degree;
+    // const double poly_degree = this->all_param.flow_solver_param.poly_degree;
 
-    const unsigned int n_dofs_cell = dg->fe_collection[poly_degree].dofs_per_cell;
-    const unsigned int n_quad_pts = dg->volume_quadrature_collection[poly_degree].size();
-    const unsigned int n_shape_fns = n_dofs_cell / nstate;
+    // const unsigned int n_dofs_cell = dg->fe_collection[poly_degree].dofs_per_cell;
+    // const unsigned int n_quad_pts = dg->volume_quadrature_collection[poly_degree].size();
+    // const unsigned int n_shape_fns = n_dofs_cell / nstate;
 
-    OPERATOR::vol_projection_operator<dim,2*dim> vol_projection(1, poly_degree, dg->max_grid_degree);
-    vol_projection.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
+    // OPERATOR::vol_projection_operator<dim,2*dim> vol_projection(1, poly_degree, dg->max_grid_degree);
+    // vol_projection.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
 
-    // Construct the basis functions and mapping shape functions.
-    OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, dg->max_grid_degree); 
-    soln_basis.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
+    // // Construct the basis functions and mapping shape functions.
+    // OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, dg->max_grid_degree); 
+    // soln_basis.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
 
-    OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, dg->max_grid_degree);
-    mapping_basis.build_1D_shape_functions_at_grid_nodes(dg->high_order_grid->oneD_fe_system, dg->high_order_grid->oneD_grid_nodes);
-    mapping_basis.build_1D_shape_functions_at_flux_nodes(dg->high_order_grid->oneD_fe_system, dg->oneD_quadrature_collection[poly_degree], dg->oneD_face_quadrature);
+    // OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, dg->max_grid_degree);
+    // mapping_basis.build_1D_shape_functions_at_grid_nodes(dg->high_order_grid->oneD_fe_system, dg->high_order_grid->oneD_grid_nodes);
+    // mapping_basis.build_1D_shape_functions_at_flux_nodes(dg->high_order_grid->oneD_fe_system, dg->oneD_quadrature_collection[poly_degree], dg->oneD_face_quadrature);
 
-    std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs_cell);
+    // std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs_cell);
     
     double integrand_numerical_entropy_function=0;
     double integral_numerical_entropy_function=0;
-    const std::vector<double> &quad_weights = dg->volume_quadrature_collection[poly_degree].get_weights();
+    // const std::vector<double> &quad_weights = dg->volume_quadrature_collection[poly_degree].get_weights();
 
     auto metric_cell = dg->high_order_grid->dof_handler_grid.begin_active();
     // Changed for loop to update metric_cell.
     for (auto cell = dg->dof_handler.begin_active(); cell!= dg->dof_handler.end(); ++cell, ++metric_cell) {
         if (!cell->is_locally_owned()) continue;
+
+        const int i_fele = cell->active_fe_index();
+        const unsigned int poly_degree = i_fele;
+
+        const unsigned int n_dofs_cell = dg->fe_collection[poly_degree].dofs_per_cell;
+        const unsigned int n_quad_pts = dg->volume_quadrature_collection[poly_degree].size();
+        const unsigned int n_shape_fns = n_dofs_cell / nstate;
+
+        OPERATOR::vol_projection_operator<dim,2*dim> vol_projection(1, poly_degree, dg->max_grid_degree);
+        vol_projection.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
+
+        // Construct the basis functions and mapping shape functions.
+        OPERATOR::basis_functions<dim,2*dim> soln_basis(1, poly_degree, dg->max_grid_degree); 
+        soln_basis.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], dg->oneD_quadrature_collection[poly_degree]);
+
+        OPERATOR::mapping_shape_functions<dim,2*dim> mapping_basis(1, poly_degree, dg->max_grid_degree);
+        mapping_basis.build_1D_shape_functions_at_grid_nodes(dg->high_order_grid->oneD_fe_system, dg->high_order_grid->oneD_grid_nodes);
+        mapping_basis.build_1D_shape_functions_at_flux_nodes(dg->high_order_grid->oneD_fe_system, dg->oneD_quadrature_collection[poly_degree], dg->oneD_face_quadrature);
+
+        std::vector<dealii::types::global_dof_index> dofs_indices (n_dofs_cell);
+
+        
         cell->get_dof_indices (dofs_indices);
         
+        const std::vector<double> &quad_weights = dg->volume_quadrature_collection[poly_degree].get_weights();
+
         // We first need to extract the mapping support points (grid nodes) from high_order_grid.
         const dealii::FESystem<dim> &fe_metric = dg->high_order_grid->fe_system;
         const unsigned int n_metric_dofs = fe_metric.dofs_per_cell;
@@ -740,9 +786,12 @@ void PeriodicTurbulence<dim, nstate>::compute_unsteady_data_and_write_to_table(
         const std::shared_ptr <dealii::TableHandler> unsteady_data_table,
         const bool do_write_unsteady_data_table_file)
 {
+    this->pcout << "Calling: compute_and_update_integrated_quantities." <<std::endl;
     // Compute and update integrated quantities
     this->compute_and_update_integrated_quantities(*dg);
+    this->pcout << "Done compute_and_update_integrated_quantities." <<std::endl;
     // Get computed quantities
+    this->pcout << "Setting all integrated_quantities." <<std::endl;
     const double integrated_kinetic_energy = this->get_integrated_kinetic_energy();
     const double integrated_enstrophy = this->get_integrated_enstrophy();
     const double vorticity_based_dissipation_rate = this->get_vorticity_based_dissipation_rate();
@@ -750,6 +799,8 @@ void PeriodicTurbulence<dim, nstate>::compute_unsteady_data_and_write_to_table(
     const double deviatoric_strain_rate_tensor_based_dissipation_rate = this->get_deviatoric_strain_rate_tensor_based_dissipation_rate();
     const double strain_rate_tensor_based_dissipation_rate = this->get_strain_rate_tensor_based_dissipation_rate();
     
+    this->pcout << "Done setting all integrated_quantities." <<std::endl;
+
     double numerical_entropy = 0;
     if (do_calculate_numerical_entropy) numerical_entropy = this->get_numerical_entropy(dg);
 
