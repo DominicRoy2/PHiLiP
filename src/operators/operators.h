@@ -1021,6 +1021,32 @@ public:
 };
 
 
+///Projection operator from high-order face back to lower order.
+template<int dim, int n_faces>
+class surface_interpolation_operator : public SumFactorizedOperators<dim,n_faces>
+{
+public:
+    ///Constructor.
+    surface_interpolation_operator (
+        const int nstate_input,
+        const unsigned int max_degree_input,
+        const unsigned int grid_degree_input);
+
+    ///Destructor.
+    ~surface_interpolation_operator () {};
+
+    ///Stores the degree of the current poly degree.
+    unsigned int current_degree;
+
+    ///Assembles the one dimensional operator.
+    void build_1D_surface_operator(
+            const dealii::FESystem<1,1> &finite_element,
+            const dealii::Quadrature<1> &face_quadrature_high,
+            const dealii::Quadrature<1> &face_quadrature_low,
+            const unsigned int iface);
+};
+
+
 ///The surface integral of test functions.
 /**\f[
 *     \mathbf{W}_f \mathbf{\chi}(\mathbf{\xi}_f^r) 

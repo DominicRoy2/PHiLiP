@@ -2228,48 +2228,14 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     const std::vector<double> &w_high = quad_high_1D.get_weights();
     const std::vector<double> &w_low  = quad_low_1D.get_weights();
 
-    dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
-
-    for (unsigned int q = 0; q < n_q_high; ++q)
-    {
-        const auto &xq = quad_high_1D.point(q);
-
-        for (unsigned int i = 0; i < n_dofs; ++i)
-            V_L_at_high(q, i) = fe_low.shape_value(i, xq);
+    dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
+    W_L = 0;
+    for (unsigned int q = 0; q < n_q_low; ++q){
+        W_L(q,q) = w_low[q];
     }
-
-    dealii::FullMatrix<double> V_L_at_low(n_q_low, n_dofs);
-
-    for (unsigned int q = 0; q < n_q_low; ++q)
-    {
-        const auto &xq = quad_low_1D.point(q);
-
-        for (unsigned int i = 0; i < n_dofs; ++i)
-            V_L_at_low(q, i) = fe_low.shape_value(i, xq);
-    }
-
-    dealii::FullMatrix<double> M(n_dofs, n_dofs);
-    M = 0;
-
-    for (unsigned int q = 0; q < n_q_low; ++q)
-    {
-        for (unsigned int i = 0; i < n_dofs; ++i)
-        {
-            for (unsigned int j = 0; j < n_dofs; ++j)
-            {
-                M(i,j) += V_L_at_low(q,i) * V_L_at_low(q,j) * w_low[q];
-                // std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
-                // std::cout << "\nV_L_at_low("<<q<<","<<i<<"): "<<V_L_at_low(q,i);
-                // std::cout << "\nV_L_at_low("<<q<<","<<j<<"): "<<V_L_at_low(q,j);
-                // std::cout << "\nw_low["<<q<<"]: "<<w_low[q];
-            }
-        }
-    }
-
-    dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
-    M_inv.copy_from(M);
-    M_inv.gauss_jordan();
-
+    
+    dealii::FullMatrix<double> M_inv(n_q_low, n_q_low);
+    M_inv.invert(W_L);
 
     dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
     W_H = 0;
@@ -2277,20 +2243,182 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
         W_H(q,q) = w_high[q];
         //std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
     }
+    dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
+    for (unsigned int i = 0; i < n_q_high; ++i){
+        const auto &xq = quad_high_1D.point(i);
+
+        for (unsigned int j = 0; j < n_q_low; ++j)
+             V_L_at_high(i, j) =
+                fe_low.shape_value(j, xq);
+    }
 
     dealii::FullMatrix<double> tmp1(n_dofs, n_q_high);   // V^T * W
     V_L_at_high.Tmmult(tmp1, W_H);
 
-    // std::cout << "\nV_L_at_high.size(): "<<V_L_at_high.size();
-    // std::cout << "\ntmp1.size(): "<<tmp1.size();
-    // std::cout << "\nW_H.size(): "<<W_H.size();
-    dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
-    M_inv.mmult(tmp2, tmp1);
-    // std::cout << "\ntmp2.size(): "<<tmp2.size();
-    // std::cout << "\nM_inv.size(): "<<M_inv.size();
     this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
-    V_L_at_low.mmult(this->oneD_surf_operator[iface], tmp2);
-    // std::cout << "\nV_L_at_low.size(): "<<V_L_at_low.size();
+    dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
+    M_inv.mmult(this->oneD_surf_operator[iface], tmp1);
+
+
+
+
+    // for (unsigned int q = 0; q < n_q_high; ++q)
+    // {
+    //     const auto &xq = quad_high_1D.point(q);
+
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //         V_L_at_high(q, i) = fe_low.shape_value(i, xq);
+    // }
+
+    // dealii::FullMatrix<double> V_L_at_low(n_q_low, n_dofs);
+
+    // for (unsigned int q = 0; q < n_q_low; ++q)
+    // {
+    //     const auto &xq = quad_low_1D.point(q);
+
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //         V_L_at_low(q, i) = fe_low.shape_value(i, xq);
+    // }
+
+    // dealii::FullMatrix<double> M(n_dofs, n_dofs);
+    // M = 0;
+
+    // for (unsigned int q = 0; q < n_q_low; ++q)
+    // {
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //     {
+    //         for (unsigned int j = 0; j < n_dofs; ++j)
+    //         {
+    //             M(i,j) += V_L_at_low(q,i) * V_L_at_low(q,j) * w_low[q];
+    //             // std::cout << "\nM["<<i<<"]["<<j<<"]: "<<M[i][j];
+    //             // std::cout << "\nV_L_at_low("<<q<<","<<i<<"): "<<V_L_at_low(q,i);
+    //             // std::cout << "\nV_L_at_low("<<q<<","<<j<<"): "<<V_L_at_low(q,j);
+    //             // std::cout << "\nw_low["<<q<<"]: "<<w_low[q];
+    //         }
+    //     }
+    // }
+
+    // // dealii::FullMatrix<double> M_inv(n_dofs, n_dofs);
+    // // M_inv.copy_from(M);
+    // // M_inv.gauss_jordan();
+    // dealii::FullMatrix<double> M_inv(n_dofs);
+    // M_inv.invert(M);
+
+    // dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
+    // W_H = 0;
+    // for (unsigned int q = 0; q < n_q_high; ++q){
+    //     W_H(q,q) = w_high[q];
+    //     //std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
+    // }
+
+    // dealii::FullMatrix<double> tmp1(n_dofs, n_q_high);   // V^T * W
+    // V_L_at_high.Tmmult(tmp1, W_H);
+
+
+    // // this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
+    // // M_inv.mmult(this->oneD_surf_operator[iface], tmp1);
+
+
+    // // std::cout << "\nV_L_at_high.size(): "<<V_L_at_high.size();
+    // // std::cout << "\ntmp1.size(): "<<tmp1.size();
+    // // std::cout << "\nW_H.size(): "<<W_H.size();
+    // dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
+    // M_inv.mmult(tmp2, tmp1);
+    // // std::cout << "\ntmp2.size(): "<<tmp2.size();
+    // // std::cout << "\nM_inv.size(): "<<M_inv.size();
+    // this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
+    // V_L_at_low.mmult(this->oneD_surf_operator[iface], tmp2);
+    // // std::cout << "\nV_L_at_low.size(): "<<V_L_at_low.size();
+}
+
+template <int dim, int n_faces>  
+surface_interpolation_operator<dim,n_faces>::surface_interpolation_operator(
+    const int nstate_input,
+    const unsigned int max_degree_input,
+    const unsigned int grid_degree_input)
+    : SumFactorizedOperators<dim,n_faces>(
+        nstate_input, max_degree_input, grid_degree_input)
+{
+    current_degree = max_degree_input;
+}
+
+template <int dim, int n_faces>
+void surface_interpolation_operator<dim,n_faces>::build_1D_surface_operator(
+    const dealii::FESystem<1,1> &fe_low,
+    const dealii::Quadrature<1> &quad_high_1D,
+    const dealii::Quadrature<1> &quad_low_1D,
+    const unsigned int iface)
+{
+    const unsigned int n_q_high = quad_high_1D.size();
+    const unsigned int n_q_low  = quad_low_1D.size();
+    this->oneD_surf_operator[iface].reinit(n_q_high, n_q_low);
+    for (unsigned int i = 0; i < n_q_high; ++i){
+        const auto &xq = quad_high_1D.point(i);
+
+        for (unsigned int j = 0; j < n_q_low; ++j)
+            this->oneD_surf_operator[iface](i,j) =
+                fe_low.shape_value(j, xq);
+    }
+    // const unsigned int n_q_high = quad_high_1D.size();
+    // const unsigned int n_q_low  = quad_low_1D.size();
+    // const unsigned int n_dofs   = fe_high.dofs_per_cell;
+    // // std::cout << "\nn_q_high: "<<n_q_high;
+    // // std::cout << "\nn_q_low: "<<n_q_low;
+    // // std::cout << "\nn_dofs: "<<n_dofs;
+    // //const std::vector<double> &w_high = quad_high_1D.get_weights();
+    // const std::vector<double> &w_low  = quad_low_1D.get_weights();
+
+    // dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
+
+    // for (unsigned int q = 0; q < n_q_high; ++q)
+    // {
+    //     const auto &xq = quad_high_1D.point(q);
+
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //         V_L_at_high(q, i) = fe_high.shape_value(i, xq);
+    // }
+
+    // dealii::FullMatrix<double> V_L_at_low(n_q_low, n_dofs);
+
+    // for (unsigned int q = 0; q < n_q_low; ++q)
+    // {
+    //     const auto &xq = quad_low_1D.point(q);
+
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //         V_L_at_low(q, i) = fe_high.shape_value(i, xq);
+    // }
+
+    // dealii::FullMatrix<double> M(n_dofs, n_dofs);
+    // M = 0;
+
+    // for (unsigned int q = 0; q < n_q_low; ++q)
+    // {
+    //     for (unsigned int i = 0; i < n_dofs; ++i)
+    //     {
+    //         for (unsigned int j = 0; j < n_dofs; ++j)
+    //         {
+    //             M(i,j) += V_L_at_low(q,i) * V_L_at_low(q,j) * w_low[q];
+    //         }
+    //     }
+    // }
+
+    // dealii::FullMatrix<double> M_inv(n_dofs);
+    // M_inv.invert(M);
+
+    // dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
+    // W_L = 0;
+    // for (unsigned int q = 0; q < n_q_low; ++q){
+    //     W_L(q,q) = w_low[q];
+    // }
+
+    // dealii::FullMatrix<double> tmp3(n_dofs, n_q_low);
+    // V_L_at_low.Tmmult(tmp3, W_L);
+
+    // dealii::FullMatrix<double> tmp4(n_dofs, n_q_low);
+    // M_inv.mmult(tmp4, tmp3);
+
+    // this->oneD_surf_operator[iface].reinit(n_q_high, n_q_low);
+    // V_L_at_high.mmult(this->oneD_surf_operator[iface], tmp4);
 }
 
 template <int dim, int n_faces>  
@@ -3187,6 +3315,7 @@ template class vol_integral_gradient_basis <PHILIP_DIM, 2*PHILIP_DIM>;
 //template class basis_at_facet_cubature <PHILIP_DIM, 2*PHILIP_DIM>;
 template class face_integral_basis <PHILIP_DIM, 2*PHILIP_DIM>;
 template class surface_projection_operator <PHILIP_DIM, 2*PHILIP_DIM>;
+template class surface_interpolation_operator <PHILIP_DIM, 2*PHILIP_DIM>;
 template class lifting_operator <PHILIP_DIM, 2*PHILIP_DIM>;
 template class lifting_operator_FR <PHILIP_DIM, 2*PHILIP_DIM>;
 
