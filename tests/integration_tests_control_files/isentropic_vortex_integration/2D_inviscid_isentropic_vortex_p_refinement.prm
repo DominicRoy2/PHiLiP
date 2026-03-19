@@ -22,7 +22,7 @@ set enable_higher_order_vtk_output = true
 
 # numerical fluxes
 set conv_num_flux = two_point_flux
-set two_point_num_flux_type = Ra
+set two_point_num_flux_type = IR
 
 subsection mesh adaptation
     set total_mesh_adaptation_cycles = 1
@@ -60,8 +60,8 @@ subsection flow_solver
   #set final_time = 23.66431913239 #=20 * sqrt(1.4), time for vortex to advect around the domain
   set final_time = 5.9160797831 #1/4 cycle to make ctest faster. Full cycle is recommended for better results.
   #set final_time = 0.1
-  set courant_friedrichs_lewy_number = 0.1
-  set unsteady_data_table_filename = isentropic_vortex_time_table
+  set courant_friedrichs_lewy_number = 0.1#0.005
+  set unsteady_data_table_filename = isentropic_vortex_p_refinement_time_table
   set do_compute_unsteady_data_and_write_to_table = false
   subsection grid
     set grid_left_bound = -10.0
