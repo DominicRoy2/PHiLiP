@@ -344,22 +344,22 @@ Functional<dim,nstate,real,MeshType>::Functional(
 template <int dim, int nstate, typename real, typename MeshType>
 void Functional<dim,nstate,real,MeshType>::init_vectors()
 {
-    solution_value.reinit(dg->solution);
+    solution_value.reinit(dg->time_averaged_solution);
     solution_value *= 0.0;
     volume_nodes_value.reinit(dg->high_order_grid->volume_nodes);
     volume_nodes_value *= 0.0;
 
-    solution_dIdW.reinit(dg->solution);
+    solution_dIdW.reinit(dg->time_averaged_solution);
     solution_dIdW *= 0.0;
     volume_nodes_dIdW.reinit(dg->high_order_grid->volume_nodes);
     volume_nodes_dIdW *= 0.0;
 
-    solution_dIdX.reinit(dg->solution);
+    solution_dIdX.reinit(dg->time_averaged_solution);
     solution_dIdX *= 0.0;
     volume_nodes_dIdX.reinit(dg->high_order_grid->volume_nodes);
     volume_nodes_dIdX *= 0.0;
 
-    solution_d2I.reinit(dg->solution);
+    solution_d2I.reinit(dg->time_averaged_solution);
     solution_d2I *= 0.0;
     volume_nodes_d2I.reinit(dg->high_order_grid->volume_nodes);
     volume_nodes_d2I *= 0.0;
@@ -379,7 +379,7 @@ Functional<dim,nstate,real,MeshType>::Functional(
 template <int dim, int nstate, typename real, typename MeshType>
 void Functional<dim,nstate,real,MeshType>::set_state(const dealii::LinearAlgebra::distributed::Vector<real> &solution_set)
 {
-    dg->solution = solution_set;
+    dg->time_averaged_solution = solution_set;
 }
 
 template <int dim, int nstate, typename real, typename MeshType>
@@ -696,10 +696,10 @@ void Functional<dim,nstate,real,MeshType>::need_compute(bool &compute_value, boo
     if (compute_value) {
         //pcout << " with value...";
 
-        if (dg->solution.size() == solution_value.size() 
+        if (dg->time_averaged_solution.size() == solution_value.size() 
             && dg->high_order_grid->volume_nodes.size() == volume_nodes_value.size()) {
 
-            auto diff_sol = dg->solution;
+            auto diff_sol = dg->time_averaged_solution;
             diff_sol -= solution_value;
             const double l2_norm_sol = diff_sol.l2_norm();
 
@@ -715,16 +715,16 @@ void Functional<dim,nstate,real,MeshType>::need_compute(bool &compute_value, boo
                 }
             }
         }
-        solution_value = dg->solution;
+        solution_value = dg->time_averaged_solution;
         volume_nodes_value = dg->high_order_grid->volume_nodes;
     }
     if (compute_dIdW) {
         pcout << " with dIdW...";
 
-        if (dg->solution.size() == solution_dIdW.size() 
+        if (dg->time_averaged_solution.size() == solution_dIdW.size() 
             && dg->high_order_grid->volume_nodes.size() == volume_nodes_dIdW.size()) {
 
-            auto diff_sol = dg->solution;
+            auto diff_sol = dg->time_averaged_solution;
             diff_sol -= solution_dIdW;
             const double l2_norm_sol = diff_sol.l2_norm();
 
@@ -740,15 +740,15 @@ void Functional<dim,nstate,real,MeshType>::need_compute(bool &compute_value, boo
                 }
             }
         }
-        solution_dIdW = dg->solution;
+        solution_dIdW = dg->time_averaged_solution;
         volume_nodes_dIdW = dg->high_order_grid->volume_nodes;
     }
     if (compute_dIdX) {
         pcout << " with dIdX...";
 
-        if (dg->solution.size() == solution_dIdX.size() 
+        if (dg->time_averaged_solution.size() == solution_dIdX.size() 
             && dg->high_order_grid->volume_nodes.size() == volume_nodes_dIdX.size()) {
-            auto diff_sol = dg->solution;
+            auto diff_sol = dg->time_averaged_solution;
             diff_sol -= solution_dIdX;
             const double l2_norm_sol = diff_sol.l2_norm();
 
@@ -764,16 +764,16 @@ void Functional<dim,nstate,real,MeshType>::need_compute(bool &compute_value, boo
                 }
             }
         }
-        solution_dIdX = dg->solution;
+        solution_dIdX = dg->time_averaged_solution;
         volume_nodes_dIdX = dg->high_order_grid->volume_nodes;
     }
     if (compute_d2I) {
         pcout << " with d2IdWdW, d2IdWdX, d2IdXdX...";
 
-        if (dg->solution.size() == solution_d2I.size() 
+        if (dg->time_averaged_solution.size() == solution_d2I.size() 
             && dg->high_order_grid->volume_nodes.size() == volume_nodes_d2I.size()) {
 
-            auto diff_sol = dg->solution;
+            auto diff_sol = dg->time_averaged_solution;
             diff_sol -= solution_d2I;
             const double l2_norm_sol = diff_sol.l2_norm();
 
@@ -790,7 +790,7 @@ void Functional<dim,nstate,real,MeshType>::need_compute(bool &compute_value, boo
                 }
             }
         }
-        solution_d2I = dg->solution;
+        solution_d2I = dg->time_averaged_solution;
         volume_nodes_d2I = dg->high_order_grid->volume_nodes;
     }
 }
@@ -840,7 +840,8 @@ real Functional<dim, nstate, real, MeshType>::evaluate_functional(
 
     allocate_derivatives(actually_compute_dIdW, actually_compute_dIdX, actually_compute_d2I);
 
-    dg->solution.update_ghost_values();
+    dg->time_averaged_solution.update_ghost_values();
+    dg->time_averaged_solution.update_ghost_values();
     auto metric_cell = dg->high_order_grid->dof_handler_grid.begin_active();
     auto soln_cell = dg->dof_handler.begin_active();
     for( ; soln_cell != dg->dof_handler.end(); ++soln_cell, ++metric_cell) {
@@ -871,7 +872,8 @@ real Functional<dim, nstate, real, MeshType>::evaluate_functional(
         if (actually_compute_dIdX || actually_compute_d2I) n_total_indep += n_metric_dofs_cell;
         unsigned int i_derivative = 0;
         for(unsigned int idof = 0; idof < n_soln_dofs_cell; ++idof) {
-            const real val = dg->solution[cell_soln_dofs_indices[idof]];
+            //const real val = dg->time_averaged_solution[cell_soln_dofs_indices[idof]];
+            const real val = dg->time_averaged_solution[cell_soln_dofs_indices[idof]];
             soln_coeff[idof] = val;
             if (actually_compute_dIdW || actually_compute_d2I) soln_coeff[idof].diff(i_derivative++, n_total_indep);
         }
@@ -884,7 +886,8 @@ real Functional<dim, nstate, real, MeshType>::evaluate_functional(
         if (actually_compute_d2I) {
             unsigned int i_derivative = 0;
             for(unsigned int idof = 0; idof < n_soln_dofs_cell; ++idof) {
-                const real val = dg->solution[cell_soln_dofs_indices[idof]];
+                //const real val = dg->time_averaged_solution[cell_soln_dofs_indices[idof]];
+                const real val = dg->time_averaged_solution[cell_soln_dofs_indices[idof]];
                 soln_coeff[idof].val() = val;
                 soln_coeff[idof].val().diff(i_derivative++, n_total_indep);
             }

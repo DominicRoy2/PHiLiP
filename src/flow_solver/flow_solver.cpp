@@ -35,7 +35,8 @@ FlowSolver<dim, nstate>::FlowSolver(
 , poly_degree(flow_solver_param.poly_degree)
 , grid_degree(flow_solver_param.grid_degree)
 , final_time(flow_solver_param.final_time)
-, input_parameters_file_reference_copy_filename(flow_solver_param.restart_files_directory_name + std::string("/") + std::string("input_copy.prm"))
+//, input_parameters_file_reference_copy_filename(flow_solver_param.restart_files_directory_name + std::string("/") + std::string("input_copy.prm"))
+, input_parameters_file_reference_copy_filename(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") + std::string("input_copy.prm"))
 , do_output_solution_at_fixed_times(ode_param.output_solution_at_fixed_times)
 , number_of_fixed_times_to_output_solution(ode_param.number_of_fixed_times_to_output_solution)
 , output_solution_at_exact_fixed_times(ode_param.output_solution_at_exact_fixed_times)
@@ -76,17 +77,23 @@ FlowSolver<dim, nstate>::FlowSolver(
         pcout << "Initializing solution from restart file..." << std::flush;
         const std::string restart_filename_without_extension = get_restart_filename_without_extension(flow_solver_param.restart_file_index);
 #if PHILIP_DIM>1
-        dg->triangulation->load(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension);
-        
+        pcout << "Loading restart file..." << std::flush;
+        //dg->triangulation->load(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension);
+        dg->triangulation->load(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") + restart_filename_without_extension);
         // Note: Future development with hp-capabilities, see section "Note on usage with DoFHandler with hp-capabilities"
         // ----- Ref: https://www.dealii.org/current/doxygen/deal.II/classparallel_1_1distributed_1_1SolutionTransfer.html
+        pcout << "Reinit solution" << std::flush;
         dealii::LinearAlgebra::distributed::Vector<double> solution_no_ghost;
         solution_no_ghost.reinit(dg->locally_owned_dofs, this->mpi_communicator);
+        pcout << "SolutionTransfer" << std::flush;
         dealii::parallel::distributed::SolutionTransfer<dim, dealii::LinearAlgebra::distributed::Vector<double>, dealii::DoFHandler<dim>> solution_transfer(dg->dof_handler);
         solution_transfer.deserialize(solution_no_ghost);
+        pcout << "dg->solution = solution_no_ghos" << std::flush;
         dg->solution = solution_no_ghost; //< assignment
+        pcout << "Done assignment" << std::flush;
         if(flow_solver_param.do_compute_time_averaged_solution && (ode_solver->current_time > flow_solver_param.time_to_start_averaging)) {
-            dg->triangulation->load(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension + std::string("_time_averaged"));
+            //dg->triangulation->load(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension + std::string("_time_averaged"));
+            dg->triangulation->load(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") +  restart_filename_without_extension + std::string("_time_averaged"));
             dealii::LinearAlgebra::distributed::Vector<double> time_averaged_solution_no_ghost;
             time_averaged_solution_no_ghost.reinit(dg->locally_owned_dofs, this->mpi_communicator);
             dealii::parallel::distributed::SolutionTransfer<dim, dealii::LinearAlgebra::distributed::Vector<double>, dealii::DoFHandler<dim>> time_averaged_solution_transfer(dg->dof_handler);
@@ -233,7 +240,8 @@ void FlowSolver<dim,nstate>::write_restart_parameter_file(
         
         // create write file with appropriate postfix given the restart index input
         const std::string restart_filename = get_restart_filename_without_extension(restart_index_input)+std::string(".prm");
-        std::ofstream RESTART_FILE(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename);
+        //std::ofstream RESTART_FILE(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename);
+        std::ofstream RESTART_FILE(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") +  restart_filename);
 
         // Lines to identify the subsections in the .prm file
         /* WARNING: (2) These must be in the order they appear in the .prm file
@@ -359,18 +367,21 @@ void FlowSolver<dim,nstate>::output_restart_files(
     // Note: Future development with hp-capabilities, see section "Note on usage with DoFHandler with hp-capabilities"
     // ----- Ref: https://www.dealii.org/current/doxygen/deal.II/classparallel_1_1distributed_1_1SolutionTransfer.html
     solution_transfer.prepare_for_serialization(dg->solution);
-    dg->triangulation->save(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension);
+    //dg->triangulation->save(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension);
+    dg->triangulation->save(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") +  restart_filename_without_extension);
 
     if(flow_solver_param.do_compute_time_averaged_solution && (ode_solver->current_time > flow_solver_param.time_to_start_averaging)) {
         // time-averaged solution files
         dealii::parallel::distributed::SolutionTransfer<dim, dealii::LinearAlgebra::distributed::Vector<double>, dealii::DoFHandler<dim>> time_averaged_solution_transfer(dg->dof_handler);
         time_averaged_solution_transfer.prepare_for_serialization(dg->time_averaged_solution);
-        dg->triangulation->save(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension +  std::string("_time_averaged"));
+        //dg->triangulation->save(flow_solver_param.restart_files_directory_name + std::string("/") + restart_filename_without_extension +  std::string("_time_averaged"));
+        dg->triangulation->save(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") +  restart_filename_without_extension +  std::string("_time_averaged"));
     }
     // unsteady data table
     if(mpi_rank==0) {
         std::string restart_unsteady_data_table_filename = flow_solver_param.unsteady_data_table_filename+std::string("-")+restart_filename_without_extension+std::string(".txt");
-        std::ofstream unsteady_data_table_file(flow_solver_param.restart_files_directory_name + std::string("/") + restart_unsteady_data_table_filename);
+        //std::ofstream unsteady_data_table_file(flow_solver_param.restart_files_directory_name + std::string("/") + restart_unsteady_data_table_filename);
+        std::ofstream unsteady_data_table_file(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/") +  restart_unsteady_data_table_filename);
         unsteady_data_table->write_text(unsteady_data_table_file);
     }
 
@@ -503,7 +514,8 @@ int FlowSolver<dim,nstate>::run() const
             pcout << "Initializing data table from corresponding restart file... " << std::flush;
             const std::string restart_filename_without_extension = get_restart_filename_without_extension(flow_solver_param.restart_file_index);
             const std::string restart_unsteady_data_table_filename = flow_solver_param.unsteady_data_table_filename+std::string("-")+restart_filename_without_extension+std::string(".txt");
-            initialize_data_table_from_file(flow_solver_param.restart_files_directory_name + std::string("/") + restart_unsteady_data_table_filename,unsteady_data_table);
+            //initialize_data_table_from_file(flow_solver_param.restart_files_directory_name + std::string("/") + restart_unsteady_data_table_filename,unsteady_data_table);
+            initialize_data_table_from_file(std::string("/home/nyaki/Codes_2/PHiLiP/build_release/tests/integration_tests_control_files/flow_solver/restart/Unsteady_SD7003_P5-restart-00201.txt"),unsteady_data_table);
             pcout << "done." << std::endl;
         } else {
             // no restart:
@@ -526,6 +538,10 @@ int FlowSolver<dim,nstate>::run() const
         while(ode_solver->current_time < final_time)
         {
             time_step = next_time_step; // update time step
+
+            if(ode_solver->current_iteration%100 == 0){
+                pcout <<"Iter.: "<<ode_solver->current_iteration<<". Current time: "<<ode_solver->current_time<<std::endl;
+            }
 
             // check if we need to decrease the time step
             if((ode_solver->current_time+time_step) > final_time && flow_solver_param.end_exactly_at_final_time) {
@@ -640,6 +656,7 @@ int FlowSolver<dim,nstate>::run() const
                     }
                 }
             }
+            //pcout << "Iter: "<<ode_solver->current_iteration<<". Time: "<< ode_solver->current_time<< std::endl;
         } // close while
         timer.stop();
         pcout << "Timer stopped. " << std::endl;
