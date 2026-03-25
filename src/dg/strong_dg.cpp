@@ -3574,8 +3574,10 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             // Note that the facet determinant of metric jacobian is the above norm multiplied by the determinant of the metric Jacobian evaluated on the facet.
             // Since the determinant of the metric Jacobian evaluated on the face cancels off, we can just scale the numerical flux by the norm.
             std::array<real,nstate> conv_num_flux_dot_n_at_q;
+            std::array<real,nstate> conv_num_flux_dot_n_at_q_inverse;
             // Convective numerical flux. 
             conv_num_flux_dot_n_at_q = this->conv_num_flux_double->evaluate_flux(soln_state_int, soln_state_ext, unit_phys_normal_int);
+            conv_num_flux_dot_n_at_q_inverse = this->conv_num_flux_double->evaluate_flux(soln_state_ext, soln_state_int, unit_phys_normal_int);
 
             // Write the values in a way that we can use sum-factorization on.
             for(int istate=0; istate<nstate; istate++){
@@ -3585,6 +3587,14 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
                 // write data
                 conv_2pt_num_flux_dot_n[istate][iquad_ext][iquad_int] = face_Jac_norm_scaled * conv_num_flux_dot_n_at_q[istate];
+                // if((iquad_ext == 0 && iquad_int == 1) || (iquad_ext == 1 && iquad_int == 0)){
+                //     pcout<<"iquad_int: "<<iquad_int<<std::endl;
+                //     pcout<<"iquad_ext: "<<iquad_ext<<std::endl;
+                //     pcout<<"conv_num_flux_dot_n_at_q("<<iquad_int<<", "<<iquad_ext<<"): "<<conv_num_flux_dot_n_at_q[istate]*face_Jac_norm_scaled<<std::endl;
+                //     pcout<<"conv_num_flux_dot_n_at_q("<<iquad_ext<<", "<<iquad_int<<"): "<<conv_num_flux_dot_n_at_q_inverse[istate]*face_Jac_norm_scaled<<std::endl;
+                //     pcout<<"soln_state_int: "<<soln_state_int[istate]<<std::endl;
+                //     pcout<<"soln_state_ext: "<<soln_state_ext[istate]<<std::endl;
+                // }
             }
         }
     }
@@ -3595,6 +3605,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     //             pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"]["<<iquad_int<<"]["<<iquad_ext<<"]: "<<conv_2pt_num_flux_dot_n[istate][iquad_int][iquad_ext]<<std::endl;
     //         }
     //     }
+    // }
     //     for (unsigned int iquad_int=0; iquad_int<n_max_face_quad_pts; ++iquad_int) {
     //         pcout<<"conv_num_flux_dot_n["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n[istate][iquad_int]<<std::endl;
     //     }
@@ -3603,12 +3614,19 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     //std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected_int;
     std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected_ext;
     std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected_int;
-    std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected_at_q;
-    std::array<std::vector<real>,nstate> diss_auxi_num_flux_dot_n_projected_at_q;
-    std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected;
+    // std::array<std::vector<real>,nstate> conv_num_flux_dot_n_projected_at_q;
+    // std::array<std::vector<real>,nstate> diss_auxi_num_flux_dot_n_projected_at_q;
     std::array<std::vector<real>,nstate> diss_auxi_num_flux_dot_n_projected;
     if(poly_degree_int != poly_degree_ext){
         if(poly_degree_int>poly_degree_ext){
+            // pcout<<"\n"<<std::endl;
+            // for(int istate=0; istate<nstate; istate++){
+            //     for (unsigned int iquad_int=0; iquad_int<n_face_quad_pts_int; ++iquad_int) {
+            //         for (unsigned int iquad_ext=0; iquad_ext<n_face_quad_pts_ext; ++iquad_ext) {
+            //             pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"]["<<iquad_ext<<"]["<<iquad_int<<"]: "<<conv_2pt_num_flux_dot_n[istate][iquad_ext][iquad_int]<<std::endl;
+            //         }
+            //     }
+            // }
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
             dealii::QGaussLobatto<1> quad_high_1D_GLL(poly_degree_int + 1);
@@ -3619,10 +3637,9 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D, quad_low_1D, neighbor_iface);
             interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D_GLL, quad_low_1D, neighbor_iface);
             for(int istate=0; istate<nstate; istate++){
-                conv_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
                 diss_auxi_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
-                conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
-                diss_auxi_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
+                // conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
+                // diss_auxi_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
                 conv_num_flux_dot_n_projected_int[istate].resize(n_max_face_quad_pts);
                 conv_num_flux_dot_n_projected_ext[istate].resize(n_min_face_quad_pts);
             
@@ -3631,66 +3648,101 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                 // pcout<<"P.m(): "<<P.m()<<". P.n(): "<<P.n()<<std::endl;
                 // pcout<<"I.m(): "<<I.m()<<". I.n(): "<<I.n()<<std::endl;
                 // pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"].m(): "<<conv_2pt_num_flux_dot_n[istate].m()<<". conv_2pt_num_flux_dot_n["<<istate<<"].n(): "<<conv_2pt_num_flux_dot_n[istate].n()<<std::endl;
-                const unsigned int n_q_high = quad_high_1D.size();
-                const unsigned int n_q_low  = quad_low_1D.size();
-                const std::vector<double> &w_high = quad_high_1D.get_weights();
-                const std::vector<double> &w_low  = quad_low_1D.get_weights();
-                dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
-                W_L = 0;
-                for (unsigned int q = 0; q < n_q_low; ++q){
-                    W_L(q,q) = w_low[q];
-                }
+                // const unsigned int n_q_high = quad_high_1D.size();
+                // const unsigned int n_q_low  = quad_low_1D.size();
+                // const std::vector<double> &w_high = quad_high_1D.get_weights();
+                // const std::vector<double> &w_low  = quad_low_1D.get_weights();
+                // dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
+                // W_L = 0;
+                // for (unsigned int q = 0; q < n_q_low; ++q){
+                //     W_L(q,q) = w_low[q];
+                // }
                 
-                dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
-                W_H = 0;
-                for (unsigned int q = 0; q < n_q_high; ++q){
-                    W_H(q,q) = w_high[q];
-                    //std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
-                }
-                //dealii::FullMatrix<double> diff(n_q_low, n_q_high);
-                dealii::FullMatrix<double> tmp1(n_q_low, n_q_high);
-                dealii::FullMatrix<double> tmp2(n_q_low, n_q_high);
-                W_L.mmult(tmp1, P);
-                I.Tmmult(tmp2, W_H);
-                for (unsigned int i = 0; i < P.m(); ++i)
+                // dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
+                // W_H = 0;
+                // for (unsigned int q = 0; q < n_q_high; ++q){
+                //     W_H(q,q) = w_high[q];
+                //     //std::cout << "\nw_high["<<q<<"]: "<<w_high[q];
+                // }
+                // //dealii::FullMatrix<double> diff(n_q_low, n_q_high);
+                // dealii::FullMatrix<double> tmp1(n_q_low, n_q_high);
+                // dealii::FullMatrix<double> tmp2(n_q_low, n_q_high);
+                // W_L.mmult(tmp1, P);
+                // I.Tmmult(tmp2, W_H);
+                // //for (unsigned int i = 0; i < P.m(); ++i)
+                // for (unsigned int ix = 0; ix < P.m(); ++ix)
+                // for (unsigned int iy = 0; iy < P.m(); ++iy)
+                // {
+                //     diss_auxi_num_flux_dot_n_projected[istate][i] = 0.0;
+                //     // conv_num_flux_dot_n_projected_ext[istate][i] = 0.0;
+
+                //     //for (unsigned int j = 0; j < P.n(); ++j)
+                //     for (unsigned int jx = 0; jx < P.n(); ++jx)
+                //     for (unsigned int jy = 0; jy < P.n(); ++jy)
+                //     {
+                //         //conv_num_flux_dot_n_projected_int[istate][j] = 0.0;
+
+                //         diss_auxi_num_flux_dot_n_projected[istate][i] +=
+                //             P(ix,jx) * P(iy,jy) * diss_auxi_num_flux_dot_n[istate][j];
+                //         // conv_num_flux_dot_n_projected_ext[istate][i] +=
+                //         //     P(ix,jx) * P(iy,jy) * conv_2pt_num_flux_dot_n[istate][i][j];//iy * N + ix
+                //         conv_num_flux_dot_n_projected_ext[istate][iy * P.m() + ix] +=
+                //             P(ix,jx) * P(iy,jy) * conv_2pt_num_flux_dot_n[istate][iy * P.m() + ix][jy * P.n() + jx];//iy * N + ix
+                //         conv_num_flux_dot_n_projected_int[istate][jy * P.n() + jx] +=
+                //             I(jx,ix) * I(jy,iy) * conv_2pt_num_flux_dot_n[istate][iy * P.m() + ix][jy * P.n() + jx];
+
+                //         //Test for M-compatibility
+                //         if(tmp1(i,j) - tmp2(i,j)> 1E-14){
+                //             pcout<<"tmp1("<<i<<","<<j<<"): "<<tmp1(i,j)<<std::endl;
+                //             pcout<<"tmp2("<<i<<","<<j<<"): "<<tmp2(i,j)<<std::endl;
+                //             pcout<<"diff("<<i<<","<<j<<"): "<<tmp1(i,j) - tmp2(i,j)<<std::endl;
+                //         }
+                //     }
+                // }
+                const unsigned int Nl = P.m(); // low
+                const unsigned int Nh = P.n(); // high
+
+                // zero output
+                std::fill(conv_num_flux_dot_n_projected_ext[istate].begin(),
+                        conv_num_flux_dot_n_projected_ext[istate].end(), 0.0);
+
+                std::fill(conv_num_flux_dot_n_projected_int[istate].begin(),
+                        conv_num_flux_dot_n_projected_int[istate].end(), 0.0);
+
+                // =======================
+                // LOW SIDE (projection)
+                // =======================
+                for (unsigned int ix = 0; ix < Nl; ++ix)
+                for (unsigned int iy = 0; iy < Nl; ++iy)
                 {
-                    conv_num_flux_dot_n_projected[istate][i] = 0.0;
-                    diss_auxi_num_flux_dot_n_projected[istate][i] = 0.0;
-                    // conv_num_flux_dot_n_projected_ext[istate][i] = 0.0;
+                    const unsigned int i = iy*Nl+ix;//idx(ix, iy, Nl);
 
-                    for (unsigned int j = 0; j < P.n(); ++j)
+                    for (unsigned int jx = 0; jx < Nh; ++jx)
+                    for (unsigned int jy = 0; jy < Nh; ++jy)
                     {
-                        //conv_num_flux_dot_n_projected_int[istate][j] = 0.0;
-
-                        conv_num_flux_dot_n_projected[istate][i] +=
-                            P(i,j) * conv_num_flux_dot_n[istate][j];
-                        diss_auxi_num_flux_dot_n_projected[istate][i] +=
-                            P(i,j) * diss_auxi_num_flux_dot_n[istate][j];
+                        const unsigned int j = jy*Nh+jx;//idx(jx, jy, Nh);
+                        diss_auxi_num_flux_dot_n_projected[istate][i] = 0.0;
                         conv_num_flux_dot_n_projected_ext[istate][i] +=
-                            P(i,j) * conv_2pt_num_flux_dot_n[istate][i][j];
-                        conv_num_flux_dot_n_projected_int[istate][j] +=
-                            I(j,i) * conv_2pt_num_flux_dot_n[istate][i][j];
-                        // conv_num_flux_dot_n_projected_int[istate][i] +=
-                        //     P(i,j) * conv_2pt_num_flux_dot_n[istate][i][j];
-                            //P(i,j) * conv_2pt_num_flux_dot_n[istate][j][i];
-                        // conv_num_flux_dot_n_projected_int[istate][i] +=
-                        //     P(i,j) * conv_2pt_num_flux_dot_n[istate][i][j];
+                            P(ix,jx) * P(iy,jy)
+                        * conv_2pt_num_flux_dot_n[istate][i][j];
 
-                        //Test for M-compatibility
-                        if(tmp1(i,j) - tmp2(i,j)> 1E-14){
-                            pcout<<"tmp1("<<i<<","<<j<<"): "<<tmp1(i,j)<<std::endl;
-                            pcout<<"tmp2("<<i<<","<<j<<"): "<<tmp2(i,j)<<std::endl;
-                            pcout<<"diff("<<i<<","<<j<<"): "<<tmp1(i,j) - tmp2(i,j)<<std::endl;
-                        }
+                        conv_num_flux_dot_n_projected_int[istate][j] +=
+                            I(jx,ix) * I(jy,iy)
+                        * conv_2pt_num_flux_dot_n[istate][i][j];
                     }
                 }
-                // soln_basis_int.matrix_vector_mult_surface_1D(face_orientation_int, 
-                //                                         iface, n_quad_pts_1D_int,
-                //                                         conv_num_flux_dot_n[istate], conv_num_flux_dot_n_projected_at_q[istate],
-                //                                         soln_basis_int.oneD_surf_operator,
-                //                                         soln_basis_int.oneD_vol_operator);
+                // pcout<<"conv_num_flux_dot_n_projected_int["<<istate<<"].size(): "<<conv_num_flux_dot_n_projected_int[istate].size()<<std::endl;
+                // pcout<<"conv_num_flux_dot_n_projected_ext["<<istate<<"].size(): "<<conv_num_flux_dot_n_projected_ext[istate].size()<<std::endl;
             }
         }else{
+            // pcout<<"\n"<<std::endl;
+            // for(int istate=0; istate<nstate; istate++){
+            //     for (unsigned int iquad_int=0; iquad_int<n_face_quad_pts_int; ++iquad_int) {
+            //         for (unsigned int iquad_ext=0; iquad_ext<n_face_quad_pts_ext; ++iquad_ext) {
+            //             pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"]["<<iquad_ext<<"]["<<iquad_int<<"]: "<<conv_2pt_num_flux_dot_n[istate][iquad_ext][iquad_int]<<std::endl;
+            //         }
+            //     }
+            // }
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
             dealii::QGaussLobatto<1> quad_high_1D_GLL(poly_degree_ext + 1);
@@ -3701,50 +3753,67 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], quad_high_1D, quad_low_1D, iface);
             interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], quad_high_1D_GLL, quad_low_1D, iface);
             for(int istate=0; istate<nstate; istate++){
-                conv_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
                 diss_auxi_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
-                conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
-                diss_auxi_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
+                //conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
+                //diss_auxi_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
                 conv_num_flux_dot_n_projected_int[istate].resize(n_min_face_quad_pts);
                 conv_num_flux_dot_n_projected_ext[istate].resize(n_max_face_quad_pts);
-
                 const auto &P = projection_oper.oneD_surf_operator[iface];
                 const auto &I = interpolation_oper.oneD_surf_operator[iface];
 
-                for (unsigned int i = 0; i < P.m(); ++i)
+                // for (unsigned int i = 0; i < P.m(); ++i)
+                // {
+                //     pcout<<"P.m(): "<<P.m()<<". P.n(): "<<P.n()<<std::endl;
+                //     pcout<<"I.m(): "<<I.m()<<". I.n(): "<<I.n()<<std::endl;
+                //     pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"].m(): "<<conv_2pt_num_flux_dot_n[istate].m()<<". conv_2pt_num_flux_dot_n["<<istate<<"].n(): "<<conv_2pt_num_flux_dot_n[istate].n()<<std::endl;
+
+
+                //     for (unsigned int j = 0; j < P.n(); ++j)
+                //     {
+                //         diss_auxi_num_flux_dot_n_projected[istate][i] +=
+                //             P(i,j) * diss_auxi_num_flux_dot_n[istate][j];
+                //         conv_num_flux_dot_n_projected_int[istate][i] +=
+                //             P(i,j) * conv_2pt_num_flux_dot_n[istate][j][i];
+                //         conv_num_flux_dot_n_projected_ext[istate][j] +=
+                //             I(j,i) * conv_2pt_num_flux_dot_n[istate][j][i];
+                //     }
+                // }
+                const unsigned int Nl = P.m(); // low
+                const unsigned int Nh = P.n(); // high
+
+                // zero output
+                std::fill(conv_num_flux_dot_n_projected_ext[istate].begin(),
+                        conv_num_flux_dot_n_projected_ext[istate].end(), 0.0);
+
+                std::fill(conv_num_flux_dot_n_projected_int[istate].begin(),
+                        conv_num_flux_dot_n_projected_int[istate].end(), 0.0);
+
+                // =======================
+                // LOW SIDE (projection)
+                // =======================
+                for (unsigned int ix = 0; ix < Nl; ++ix)
+                for (unsigned int iy = 0; iy < Nl; ++iy)
                 {
-                    // conv_num_flux_dot_n_projected[istate][i] = 0.0;
-                    // diss_auxi_num_flux_dot_n_projected[istate][i] = 0.0;
-                    // conv_num_flux_dot_n_projected_ext[istate][i] = 0.0;
-                    // conv_num_flux_dot_n_projected_int[istate][i] = 0.0;
-                    // pcout<<"P.m(): "<<P.m()<<". P.n(): "<<P.n()<<std::endl;
-                    // pcout<<"I.m(): "<<I.m()<<". I.n(): "<<I.n()<<std::endl;
-                    // pcout<<"conv_2pt_num_flux_dot_n["<<istate<<"].m(): "<<conv_2pt_num_flux_dot_n[istate].m()<<". conv_2pt_num_flux_dot_n["<<istate<<"].n(): "<<conv_2pt_num_flux_dot_n[istate].n()<<std::endl;
+                    const unsigned int i = iy*Nl+ix;//idx(ix, iy, Nl);
 
-
-                    for (unsigned int j = 0; j < P.n(); ++j)
+                    for (unsigned int jx = 0; jx < Nh; ++jx)
+                    for (unsigned int jy = 0; jy < Nh; ++jy)
                     {
-                        //conv_num_flux_dot_n_projected_int[istate][j] = 0.0;
-                        conv_num_flux_dot_n_projected[istate][i] +=
-                            P(i,j) * conv_num_flux_dot_n[istate][j];
-                        diss_auxi_num_flux_dot_n_projected[istate][i] +=
-                            P(i,j) * diss_auxi_num_flux_dot_n[istate][j];
+                        const unsigned int j = jy*Nh+jx;//idx(jx, jy, Nh);
+                        diss_auxi_num_flux_dot_n_projected[istate][i] = 0.0;
                         conv_num_flux_dot_n_projected_int[istate][i] +=
-                            P(i,j) * conv_2pt_num_flux_dot_n[istate][j][i];
+                            P(ix,jx) * P(iy,jy)
+                        * conv_2pt_num_flux_dot_n[istate][j][i];
+
                         conv_num_flux_dot_n_projected_ext[istate][j] +=
-                            I(j,i) * conv_2pt_num_flux_dot_n[istate][j][i];
+                            I(jx,ix) * I(jy,iy)
+                        * conv_2pt_num_flux_dot_n[istate][j][i];
                     }
                 }
-                // soln_basis_ext.matrix_vector_mult_surface_1D(face_orientation_ext, 
-                //                                         neighbor_iface, n_quad_pts_1D_ext,
-                //                                         conv_num_flux_dot_n[istate], conv_num_flux_dot_n_projected_at_q[istate],
-                //                                         soln_basis_ext.oneD_surf_operator,
-                //                                         soln_basis_ext.oneD_vol_operator);
             }
         }
     }else{
         for(int istate=0; istate<nstate; istate++){
-            conv_num_flux_dot_n_projected[istate] = conv_num_flux_dot_n[istate];
             diss_auxi_num_flux_dot_n_projected[istate] = diss_auxi_num_flux_dot_n[istate];
             conv_num_flux_dot_n_projected_int[istate] = conv_num_flux_dot_n[istate];
             conv_num_flux_dot_n_projected_ext[istate] = conv_num_flux_dot_n[istate];
@@ -3760,30 +3829,27 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
     //             pcout<<"conv_num_flux_dot_n_projected_int["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected_int[istate][iquad_int]<<std::endl;
     //         }
     //         for (unsigned int iquad_int=0; iquad_int<n_min_face_quad_pts; ++iquad_int) {
-    //             pcout<<"conv_num_flux_dot_n_projected["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected[istate][iquad_int]<<std::endl;
-    //         }
-    //         for (unsigned int iquad_int=0; iquad_int<n_min_face_quad_pts; ++iquad_int) {
     //             pcout<<"conv_num_flux_dot_n_projected_ext["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected_ext[istate][iquad_int]<<std::endl;
     //         }
     //     }
     // }
 
-    // //if(poly_degree_int<poly_degree_ext){
+    // if(poly_degree_int<poly_degree_ext){
     //     for(int istate=0; istate<nstate; istate++){
-    //         for (unsigned int iquad_int=0; iquad_int<n_max_face_quad_pts; ++iquad_int) {
-    //             pcout<<"conv_num_flux_dot_n["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n[istate][iquad_int]<<std::endl;
-    //         }
+    //         // for (unsigned int iquad_int=0; iquad_int<n_max_face_quad_pts; ++iquad_int) {
+    //         //     pcout<<"conv_num_flux_dot_n["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n[istate][iquad_int]<<std::endl;
+    //         // }
     //         for (unsigned int iquad_int=0; iquad_int<n_max_face_quad_pts; ++iquad_int) {
     //             pcout<<"conv_num_flux_dot_n_projected_ext["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected_ext[istate][iquad_int]<<std::endl;
     //         }
-    //         for (unsigned int iquad_int=0; iquad_int<n_min_face_quad_pts; ++iquad_int) {
-    //             pcout<<"conv_num_flux_dot_n_projected["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected[istate][iquad_int]<<std::endl;
-    //         }
+    //         // for (unsigned int iquad_int=0; iquad_int<n_min_face_quad_pts; ++iquad_int) {
+    //         //     pcout<<"conv_num_flux_dot_n_projected["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected[istate][iquad_int]<<std::endl;
+    //         // }
     //         for (unsigned int iquad_int=0; iquad_int<n_min_face_quad_pts; ++iquad_int) {
     //             pcout<<"conv_num_flux_dot_n_projected_int["<<istate<<"]["<<iquad_int<<"]: "<<conv_num_flux_dot_n_projected_int[istate][iquad_int]<<std::endl;
     //         }
     //     }
-    // //}
+    // }
 
     // if(poly_degree_int==poly_degree_ext){
     //     for(int istate=0; istate<nstate; istate++){
