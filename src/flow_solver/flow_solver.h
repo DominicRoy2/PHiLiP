@@ -87,6 +87,8 @@ public:
     /// Returns the restart filename without extension given a restart index (adds padding appropriately)
     std::string get_restart_filename_without_extension(const unsigned int restart_index_input) const;
 
+    void perform_explicit_mesh_adaptation() const;
+
 protected:
     const MPI_Comm mpi_communicator; ///< MPI communicator.
     const int mpi_rank; ///< MPI rank.
@@ -141,8 +143,6 @@ private:
     /** Currently implemented for steady state flows.
      */
     void perform_steady_state_mesh_adaptation() const;
-
-    void perform_explicit_mesh_adaptation() const;
 
     /// Fixed times at which to output the solution
     dealii::Table<1,double> output_solution_fixed_times;

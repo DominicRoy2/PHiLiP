@@ -41,6 +41,11 @@ int EulerSplitEntropyCheck<dim, nstate>::run_test() const
 
         // Compute  initial and final entropy
         std::unique_ptr<FlowSolver::PeriodicTurbulence<dim, nstate>> flow_solver_case = std::make_unique<FlowSolver::PeriodicTurbulence<dim,nstate>>(this->all_parameters);
+        if(parameters.mesh_adaptation_param.total_mesh_adaptation_cycles > 0){
+            pcout << "\nPerforming explicit mesh adaptation..." << std::endl;
+            flow_solver->perform_explicit_mesh_adaptation();
+            pcout << "Mesh adaptation completed.\n" << std::endl;
+        }
         const double initial_entropy = flow_solver_case->get_numerical_entropy(flow_solver->dg); 
         flow_solver_case->compute_and_update_integrated_quantities(*flow_solver->dg);
         const double initial_KE = flow_solver_case->get_integrated_kinetic_energy();
