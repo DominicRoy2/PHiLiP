@@ -466,6 +466,11 @@ int FlowSolver<dim,nstate>::run() const
         // Initializing restart related variables
         //----------------------------------------------------
 
+    if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0){
+        pcout << "\nPerforming explicit mesh adaptation..." << std::endl;
+        perform_explicit_mesh_adaptation();
+        pcout << "Mesh adaptation completed.\n" << std::endl;
+    }
 
 
 #if PHILIP_DIM>1
@@ -565,11 +570,11 @@ int FlowSolver<dim,nstate>::run() const
             ode_solver->step_in_time(time_step,false); // pseudotime==false
 
 
-            if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0 && ode_solver->current_iteration % 100 == 0){
-                pcout << "\nPerforming explicit mesh adaptation..." << std::endl;
-                perform_explicit_mesh_adaptation();
-                pcout << "Mesh adaptation completed.\n" << std::endl;
-            }
+            // if(this->all_param.mesh_adaptation_param.total_mesh_adaptation_cycles > 0 && ode_solver->current_iteration % 100 == 0){
+            //     pcout << "\nPerforming explicit mesh adaptation..." << std::endl;
+            //     perform_explicit_mesh_adaptation();
+            //     pcout << "Mesh adaptation completed.\n" << std::endl;
+            // }
 
             // Compute time-averaged solution and Reynolds stresses for turbulent cases
             if(flow_solver_param.do_compute_time_averaged_solution){
