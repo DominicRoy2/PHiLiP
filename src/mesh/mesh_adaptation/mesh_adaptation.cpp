@@ -208,78 +208,151 @@ void MeshAdaptation<dim,real,MeshType>::mark_airfoil_layers(dealii::DoFHandler<d
 {
     using Cell = typename dealii::DoFHandler<dim>::active_cell_iterator;
 
-    // -----------------------------
-    // Pass 1: mark boundary cells
-    // -----------------------------
-    std::set<dealii::types::global_cell_index> boundary_cells;
-    std::set<dealii::types::global_cell_index> second_layer_cells;
-
     for (const auto &cell : dof_handler.active_cell_iterators())
     {
         if (!cell->is_locally_owned())
             continue;
+
+        bool refine = false;
 
         for (unsigned int f = 0; f < dealii::GeometryInfo<dim>::faces_per_cell; ++f)
         {
             const auto face = cell->face(f);
 
+            // -----------------------------
+            // First layer (touches airfoil)
+            // -----------------------------
             if (face->at_boundary() && face->boundary_id() == 1001)
             {
-                boundary_cells.insert(cell->active_cell_index());
+                refine = true;
                 break;
             }
-        }
-    }
 
-    // -----------------------------
-    // Pass 2: mark neighbors
-    // -----------------------------
-    //std::set<typename Cell::active_cell_index_type> second_layer_cells;
-
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    {
-        if (!cell->is_locally_owned())
-            continue;
-
-        // Skip already marked boundary cells
-        if (boundary_cells.count(cell->active_cell_index()))
-            continue;
-
-        for (unsigned int iface = 0; iface < dealii::GeometryInfo<dim>::faces_per_cell; ++iface)
-        {
-            if (cell->at_boundary(iface))
-                continue;
-
-            //neighbor is boundary cell
-            const auto neighbor = cell->neighbor(iface);
-
-            // Only check if neighbor is accessible (ghost or local)
-            if ((neighbor->is_locally_owned() || neighbor->is_ghost())) //&& neighbor_face->at_boundary())
+            // -----------------------------
+            // Second layer (neighbor touches airfoil)
+            // -----------------------------
+            if (!cell->at_boundary(f))
             {
-                if (boundary_cells.count(neighbor->active_cell_index()))
+                const auto neighbor = cell->neighbor(f);
+
+                if (neighbor->is_locally_owned() || neighbor->is_ghost())
                 {
-                    second_layer_cells.insert(cell->active_cell_index());
-                    break;
+                    for (unsigned int nf = 0; nf < dealii::GeometryInfo<dim>::faces_per_cell; ++nf)
+                    {
+                        const auto nface = neighbor->face(nf);
+
+                        if (nface->at_boundary() && nface->boundary_id() == 1001)
+                        {
+                            refine = true;
+                            break;
+                        }
+                    }
+
+                    if (refine)
+                        break;
                 }
             }
         }
-    }
 
-    // -----------------------------
-    // Apply refinement flags
-    // -----------------------------
-    for (const auto &cell : dof_handler.active_cell_iterators())
-    {
-        if (!cell->is_locally_owned())
-            continue;
-
-        const auto idx = cell->active_cell_index();
-
-        if (boundary_cells.count(idx) || second_layer_cells.count(idx))
-        {
+        if (refine)
             cell->set_refine_flag();
-        }
+        else
+            cell->clear_refine_flag(); // optional safety
     }
+
+    // // -----------------------------
+    // // Pass 1: mark boundary cells
+    // // -----------------------------
+    // std::set<Cell> boundary_cells;
+    // std::set<Cell> second_layer_cells;
+
+    // for (const auto &cell : dof_handler.active_cell_iterators())
+    // {
+    //     if (!cell->is_locally_owned())
+    //         continue;
+
+    //     for (unsigned int f = 0; f < dealii::GeometryInfo<dim>::faces_per_cell; ++f)
+    //     {
+    //         const auto face = cell->face(f);
+
+    //         if (face->at_boundary() && face->boundary_id() == 1001)
+    //         {
+    //             cell->set_user_flag();
+    //             cell->set_refine_flag();
+    //             // boundary_cells.insert(cell);
+    //             // break;
+    //         }
+    //     }
+    // }
+
+    // // -----------------------------
+    // // Pass 2: mark neighbors
+    // // -----------------------------
+    // //std::set<typename Cell::active_cell_index_type> second_layer_cells;
+
+    // for (const auto &cell : dof_handler.active_cell_iterators())
+    // {
+    //     if (!cell->is_locally_owned())
+    //         continue;
+
+    //     if (!cell->user_flag_set())
+    //     {
+    //         for (unsigned int f = 0; f < dealii::GeometryInfo<dim>::faces_per_cell; ++f)
+    //         {
+    //             if (cell->at_boundary(f)) continue;
+
+    //             const auto neighbor = cell->neighbor(f);
+
+    //             if (neighbor->is_locally_owned() || neighbor->is_ghost())
+    //             {
+    //                 if (neighbor->user_flag_set())
+    //                 {
+    //                     cell->set_refine_flag();
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     // // Skip already marked boundary cells
+    //     // if (boundary_cells.count(cell))
+    //     //     continue;
+
+    //     // for (unsigned int iface = 0; iface < dealii::GeometryInfo<dim>::faces_per_cell; ++iface)
+    //     // {
+    //     //     if (cell->at_boundary(iface))
+    //     //         continue;
+
+    //     //     //neighbor is boundary cell
+    //     //     const auto neighbor = cell->neighbor(iface);
+
+    //     //     // Only check if neighbor is accessible (ghost or local)
+    //     //     if ((neighbor->is_locally_owned() || neighbor->is_ghost())) //&& neighbor_face->at_boundary())
+    //     //     {
+    //     //         if (boundary_cells.count(neighbor))
+    //     //         {
+    //     //             second_layer_cells.insert(cell);
+    //     //             break;
+    //     //         }
+    //     //     }
+    //     // }
+    // }
+
+    // // -----------------------------
+    // // Apply refinement flags
+    // // -----------------------------
+    // for (const auto &cell : dof_handler.active_cell_iterators())
+    // {
+    //     // if (!cell->is_locally_owned())
+    //     //     continue;
+
+    //     // const auto idx = cell->active_cell_index();
+
+    //     // if (boundary_cells.count(cell) || second_layer_cells.count(cell))
+    //     // {
+    //     //     cell->set_refine_flag();
+    //     // }
+    //     cell->clear_user_flag();
+    // }
 
     unsigned int local_count = 0;
     //unsigned int global_count = local_count;

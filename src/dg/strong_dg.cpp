@@ -455,9 +455,6 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_auxiliary_residual()
     using ODE_enum = Parameters::ODESolverParam::ODESolverEnum;
     const PDE_enum pde_type = this->all_parameters->pde_type;
 
-    pcout<<"Output VTK file BEFORE Auxiliary residual."<<std::endl;
-    this->output_results_vtk(9,0.0);
-
     if(pde_type == PDE_enum::burgers_viscous){
         pcout << "DG Strong not yet verified for Burgers' viscous. Aborting..." << std::endl;
         std::abort();
