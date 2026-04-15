@@ -2932,8 +2932,8 @@ void DGBase<dim,real,MeshType>::apply_inverse_global_mass_matrix(
         const bool Cartesian_element = (soln_cell->manifold_id() == dealii::numbers::flat_manifold_id);
 
         // if poly degree, the element manifold type, or grid degree changed for this cell, reinitialize the reference operator
-        if((poly_degree != mass_inv.current_degree && Cartesian_element && !use_auxiliary_eq) || 
-            (poly_degree != projection_oper.current_degree && (grid_degree > 1 || Cartesian_element) && !use_auxiliary_eq) || (poly_degree != mapping_basis.current_degree))
+        if((poly_degree != mass_inv.current_degree && Cartesian_element) || 
+            (poly_degree != projection_oper.current_degree && (grid_degree > 1 || Cartesian_element)) || (poly_degree != mapping_basis.current_degree))
         {
             mapping_basis.build_1D_shape_functions_at_volume_flux_nodes(high_order_grid->oneD_fe_system, oneD_quadrature_collection[poly_degree]);
             if(Cartesian_element){//then we can factor out det of Jac and rapidly simplify
@@ -3095,8 +3095,8 @@ void DGBase<dim,real,MeshType>::apply_global_mass_matrix(
         const bool Cartesian_element = (soln_cell->manifold_id() == dealii::numbers::flat_manifold_id) ? true : false;
 
         //if poly degree changed for this cell, rinitialize
-        if((poly_degree != mass.current_degree && (grid_degree == 1 || Cartesian_element) && !use_auxiliary_eq) || 
-            (poly_degree != projection_oper.current_degree && (grid_degree > 1 || !Cartesian_element) && !use_auxiliary_eq)){
+        if((poly_degree != mass.current_degree && (grid_degree == 1 || Cartesian_element)) || 
+            (poly_degree != projection_oper.current_degree && (grid_degree > 1 || !Cartesian_element))){
                 mapping_basis.build_1D_shape_functions_at_volume_flux_nodes(high_order_grid->oneD_fe_system, oneD_quadrature_collection[poly_degree]);
                 if(use_auxiliary_eq){
                     mass_aux.build_1D_volume_operator(oneD_fe_collection_1state[poly_degree], oneD_quadrature_collection[poly_degree]);

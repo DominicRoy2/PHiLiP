@@ -56,6 +56,8 @@ protected:
     /// Decide whether to perform h or p refinement based on a smoothness indicator.
     void smoothness_sensor_based_hp_refinement();
     
+    void mark_airfoil_layers(dealii::DoFHandler<dim> &dof_handler);
+
     /// Stores errors in each cell
     dealii::Vector<real> cellwise_errors;
 

@@ -231,6 +231,7 @@ public:
         OPERATOR::basis_functions<dim,2*dim>               &soln_basis_int,
         OPERATOR::basis_functions<dim,2*dim>               &soln_basis_ext,
         OPERATOR::metric_operators<real,dim,2*dim>         &metric_oper_int,
+        OPERATOR::metric_operators<real,dim,2*dim>         &metric_oper_ext,
         std::vector<dealii::Tensor<1,dim,real>>            &local_auxiliary_RHS_int,
         std::vector<dealii::Tensor<1,dim,real>>            &local_auxiliary_RHS_ext);
 

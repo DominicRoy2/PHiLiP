@@ -22,6 +22,7 @@ void MeshAdaptation<dim,real,MeshType>::adapt_mesh()
     [[maybe_unused]] unsigned int actual_size_of_cellwise_errors = cellwise_errors.size();
     AssertDimension(expected_size_of_cellwise_errors, actual_size_of_cellwise_errors);
 
+    pcout<<"Performing fixed_fraction_isotropic_refinement_and_coarsening: "<<std::endl;
     fixed_fraction_isotropic_refinement_and_coarsening();
     current_mesh_adaptation_cycle++;
     pcout<<"Mesh has been adapted according to the specified error indicator. Adaptation cycle = "<<current_mesh_adaptation_cycle<<std::endl;
@@ -56,12 +57,29 @@ void MeshAdaptation<dim,real,MeshType>::fixed_fraction_isotropic_refinement_and_
     MeshAdaptationTypeEnum mesh_adaptation_type = mesh_adaptation_param->mesh_adaptation_type;
 
 
+    // ----------------------------------------
+    // Clear any previous flags (important)
+    // ----------------------------------------
+    for (const auto &cell : dg->dof_handler.active_cell_iterators())
+    {
+        if (cell->is_locally_owned())
+        {
+            cell->clear_refine_flag();
+            cell->clear_coarsen_flag();
+        }
+    }
+
+    // ----------------------------------------
+    // Mark the cells you want
+    // ----------------------------------------
+    mark_airfoil_layers(dg->dof_handler);
+
     if(mesh_adaptation_type == MeshAdaptationTypeEnum::h_adaptation){
         // Do nothing, cells are already flagged for h-adaptation
     } else if(mesh_adaptation_type == MeshAdaptationTypeEnum::p_adaptation){
         dealii::hp::Refinement::p_adaptivity_fixed_number(dg->dof_handler,
                                                           cellwise_errors,
-                                                          0.5,
+                                                          1.0,
                                                           0.0);
         
         // If a cell is flagged for both h and p adaptation, perform only p adaptation.
@@ -183,6 +201,111 @@ void MeshAdaptation<dim,real,MeshType>::smoothness_sensor_based_hp_refinement()
             cell->set_future_fe_index(cell->active_fe_index()+1);
         }
     }
+}
+
+template <int dim, typename real, typename MeshType>
+void MeshAdaptation<dim,real,MeshType>::mark_airfoil_layers(dealii::DoFHandler<dim> &dof_handler)
+{
+    using Cell = typename dealii::DoFHandler<dim>::active_cell_iterator;
+
+    // -----------------------------
+    // Pass 1: mark boundary cells
+    // -----------------------------
+    std::set<dealii::types::global_cell_index> boundary_cells;
+    std::set<dealii::types::global_cell_index> second_layer_cells;
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+        if (!cell->is_locally_owned())
+            continue;
+
+        for (unsigned int f = 0; f < dealii::GeometryInfo<dim>::faces_per_cell; ++f)
+        {
+            const auto face = cell->face(f);
+
+            if (face->at_boundary() && face->boundary_id() == 1001)
+            {
+                boundary_cells.insert(cell->active_cell_index());
+                break;
+            }
+        }
+    }
+
+    // -----------------------------
+    // Pass 2: mark neighbors
+    // -----------------------------
+    //std::set<typename Cell::active_cell_index_type> second_layer_cells;
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+        if (!cell->is_locally_owned())
+            continue;
+
+        // Skip already marked boundary cells
+        if (boundary_cells.count(cell->active_cell_index()))
+            continue;
+
+        for (unsigned int iface = 0; iface < dealii::GeometryInfo<dim>::faces_per_cell; ++iface)
+        {
+            if (cell->at_boundary(iface))
+                continue;
+
+            //neighbor is boundary cell
+            const auto neighbor = cell->neighbor(iface);
+
+            // Only check if neighbor is accessible (ghost or local)
+            if ((neighbor->is_locally_owned() || neighbor->is_ghost())) //&& neighbor_face->at_boundary())
+            {
+                if (boundary_cells.count(neighbor->active_cell_index()))
+                {
+                    second_layer_cells.insert(cell->active_cell_index());
+                    break;
+                }
+            }
+        }
+    }
+
+    // -----------------------------
+    // Apply refinement flags
+    // -----------------------------
+    for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+        if (!cell->is_locally_owned())
+            continue;
+
+        const auto idx = cell->active_cell_index();
+
+        if (boundary_cells.count(idx) || second_layer_cells.count(idx))
+        {
+            cell->set_refine_flag();
+        }
+    }
+
+    unsigned int local_count = 0;
+    //unsigned int global_count = local_count;
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+    {
+        if (cell->is_locally_owned() && cell->refine_flag_set())
+            local_count++;
+    }
+
+    MPI_Comm comm = MPI_COMM_SELF;
+
+    if constexpr (
+        std::is_same_v<MeshType, dealii::parallel::distributed::Triangulation<dim>> ||
+        std::is_same_v<MeshType, dealii::parallel::shared::Triangulation<dim>>)
+    {
+        const auto &tria =
+            static_cast<const MeshType &>(dof_handler.get_triangulation());
+
+        comm = tria.get_communicator();
+    }
+
+    const unsigned int global_count =
+        dealii::Utilities::MPI::sum(local_count, comm);
+
+    pcout << "Total refined cells: " << global_count << std::endl;
 }
 
 

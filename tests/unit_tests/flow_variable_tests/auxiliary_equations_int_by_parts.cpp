@@ -427,7 +427,7 @@ int main (int argc, char * argv[])
                         poly_degree, poly_degree,
                         current_dofs_indices, neighbor_dofs_indices,
                         basis, basis,
-                        metric_oper,
+                        metric_oper,metric_oper,
                         rhs_strong, rhs_ext_strong);
                      
                     const unsigned int n_face_quad_pts = dg->face_quadrature_collection[poly_degree].size();//assume interior cell does the work

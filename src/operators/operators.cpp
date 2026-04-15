@@ -2247,7 +2247,7 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     for (unsigned int i = 0; i < n_q_high; ++i){
         const auto &xq = quad_high_1D.point(i);
 
-        for (unsigned int j = 0; j < n_q_low; ++j)
+        for (unsigned int j = 0; j < n_dofs; ++j)
              V_L_at_high(i, j) =
                 fe_low.shape_value(j, xq);
     }
