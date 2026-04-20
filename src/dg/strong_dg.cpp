@@ -3736,14 +3736,13 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             // }
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
-            dealii::QGaussLobatto<1> quad_high_1D_GLL(poly_degree_int + 1);
             dealii::QGaussLobatto<1> quad_high_1D (poly_degree_int + 1);
             dealii::QGaussLobatto<1> quad_low_1D (poly_degree_ext + 1);
             // dealii::QGauss<1> quad_high_1D(poly_degree_int + 1);
             // dealii::QGauss<1> quad_low_1D (poly_degree_ext + 1);
             const int neighbor_iface_1D = neighbor_iface % 2;//the reference neighbour face number
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D, quad_low_1D, neighbor_iface_1D);
-            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D_GLL, quad_low_1D, neighbor_iface_1D);
+            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], quad_high_1D, quad_low_1D, neighbor_iface_1D);
             for(int istate=0; istate<nstate; istate++){
                 //diss_auxi_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
                 // conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);
@@ -3866,14 +3865,13 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             // }
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
-            dealii::QGaussLobatto<1> quad_high_1D_GLL(poly_degree_ext + 1);
             dealii::QGaussLobatto<1> quad_high_1D(poly_degree_ext + 1);
             dealii::QGaussLobatto<1> quad_low_1D (poly_degree_int + 1);
             // dealii::QGauss<1> quad_high_1D(poly_degree_ext + 1);
             // dealii::QGauss<1> quad_low_1D (poly_degree_int + 1);
             const int iface_1D = iface % 2;//the reference face number
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], quad_high_1D, quad_low_1D, iface_1D);
-            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], quad_high_1D_GLL, quad_low_1D, iface_1D);
+            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], quad_high_1D, quad_low_1D, iface_1D);
             for(int istate=0; istate<nstate; istate++){
                 //diss_auxi_num_flux_dot_n_projected[istate].resize(n_min_face_quad_pts);
                 //conv_num_flux_dot_n_projected_at_q[istate].resize(n_min_face_quad_pts);

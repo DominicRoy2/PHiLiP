@@ -2228,14 +2228,40 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     const std::vector<double> &w_high = quad_high_1D.get_weights();
     const std::vector<double> &w_low  = quad_low_1D.get_weights();
 
-    dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
-    W_L = 0;
-    for (unsigned int q = 0; q < n_q_low; ++q){
-        W_L(q,q) = w_low[q];
+    dealii::FullMatrix<double> V_L(n_dofs, n_dofs);
+    for (unsigned int i = 0; i < n_q_low; ++i){
+        const auto &xq = quad_low_1D.point(i);
+
+        for (unsigned int j = 0; j < n_dofs; ++j)
+             V_L(i, j) =
+                fe_low.shape_value(j, xq);
     }
-    
+
+    dealii::FullMatrix<double> M_L(n_q_low, n_q_low);
+    M_L = 0;
+    // dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
+    // W_L = 0;
+    for (unsigned int q = 0; q < n_q_low; ++q){
+        //W_L(q,q) = w_low[q];
+        for (unsigned int i = 0; i < n_dofs; ++i){
+            for (unsigned int j = 0; j < n_dofs; ++j){
+                M_L(i,j) += V_L(q,i)*V_L(q,j)*w_low[q];
+            }
+        }
+    }
+    // //std::cout <<"\n"<<std::endl;
+    // for (unsigned int i = 0; i < n_dofs; ++i){
+    //     for (unsigned int j = 0; j < n_dofs; ++j){
+    //         // std::cout << "\nW_L("<<i<<","<<j<<"): "<<W_L(i,j);
+    //         // std::cout << "\nM_L("<<i<<","<<j<<"): "<<M_L(i,j);
+    //         if(M_L(i,j)-W_L(i,j)>1e-14){
+    //             std::cout << "\nERROR, Mass MATRIX NOT COMPUTED Correctly";
+    //         }
+    //     }
+    // }
+
     dealii::FullMatrix<double> M_inv(n_q_low, n_q_low);
-    M_inv.invert(W_L);
+    M_inv.invert(M_L);
 
     dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
     W_H = 0;
