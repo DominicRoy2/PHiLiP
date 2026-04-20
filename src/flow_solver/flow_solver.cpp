@@ -539,9 +539,9 @@ int FlowSolver<dim,nstate>::run() const
         {
             time_step = next_time_step; // update time step
 
-            if(ode_solver->current_iteration%100 == 0){
-                pcout <<"Iter.: "<<ode_solver->current_iteration<<". Current time: "<<ode_solver->current_time<<std::endl;
-            }
+            //if(ode_solver->current_iteration%100 == 0){
+                //pcout <<"Iter.: "<<ode_solver->current_iteration<<". Current time: "<<ode_solver->current_time<<std::endl;
+            //}
 
             // check if we need to decrease the time step
             if((ode_solver->current_time+time_step) > final_time && flow_solver_param.end_exactly_at_final_time) {
