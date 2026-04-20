@@ -1383,9 +1383,24 @@ void NavierStokes<dim,nstate,real>
         // Manufactured solution boundary condition
         boundary_manufactured_solution (pos, normal_int, soln_int, soln_grad_int, soln_bc, soln_grad_bc);
     } 
-    else if (boundary_type == 1001 || boundary_type == 1006) {
+    else if (boundary_type == 1001) {
         // Wall boundary condition
         boundary_wall_viscous_flux (normal_int, soln_int, soln_grad_int, soln_bc, soln_grad_bc);
+    }
+    else if (boundary_type == 1006)
+    {
+        /* Reference: Brian Vermeire's thesis 2014 Equations 3.72-3.73
+           For slip wall boundary conditions, we require that the 
+           viscous fluxes across the boundary are negligible. 
+           To do this, we can simply project the solution vector
+           and the gradient from the interior point onto the boundary.
+           This effectively eliminates the penalty term at the 
+           boundary for both the gradient and flux terms.
+        */
+        for (int istate=0; istate<nstate; ++istate) {
+            soln_bc[istate] = soln_int[istate];
+            soln_grad_bc[istate] = soln_grad_int[istate];
+        }
     }
     // (1006)
     // {
