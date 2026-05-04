@@ -59,6 +59,9 @@ public:
     /// Thermal boundary condition type (adiabatic or isothermal)
     const thermal_boundary_condition_enum thermal_boundary_condition_type;
 
+    /// Distance from wall for wall model input velocity
+    const double distance_from_wall_for_wall_model_input_velocity = 0.0022;
+
 protected:    
     ///@{
     /** Constants for Sutherland's law for viscosity
@@ -456,6 +459,43 @@ public:
         const dealii::Tensor<1,dim,real2> &vel,
         const dealii::Tensor<2,dim,real2> &viscous_stress_tensor,
         const dealii::Tensor<1,dim,real2> &heat_flux) const;
+
+    real get_velocity_component_parallel_to_wall_from_solution_and_normal_vector (
+        const std::array<real,nstate> &conservative_soln,
+        const dealii::Tensor<1,dim,real> &normal_vector) const;
+
+    /// Returns the wall shear stress magnitude calculated from the wall model
+    real get_wall_shear_stress_magnitude(
+        const real wall_parallel_velocity, 
+        const real distance, 
+        const real viscosity_coefficient,
+        const real density,
+        const double reynolds_number_inf) const;
+
+    real interpolate(const real x, const bool extrapolate ) const; ///< interpolate function
+
+    /** Number of different computed quantities
+     *  Corresponds to the number of items in IntegratedQuantitiesEnum
+     * Reference: Page 31-32 of Julien Brillon's thesis available at https://escholarship.mcgill.ca/concern/theses/h989r903p
+     * */
+    static const int NUMBER_OF_SAMPLE_POINTS = 38;
+    ///< x and y data for the look up table
+    static constexpr std::array<double,NUMBER_OF_SAMPLE_POINTS> yData = 
+            {{0.0, 3.0, 5.0, 8.0, 10.0, 20.0, 35.0, 50.0, 75.0, 100.0, 125.0, 150.0,
+              200.0, 250.0, 300.0, 350.0, 400.0, 500.0, 575.0, 650.0, 725.0, 800.0, 
+              900.0, 1000.0, 1100.0, 1200.0, 1300.0, 1400.0, 1500.0, 1600.0, 1800.0, 
+              2000.0, 2500.0, 3000.0, 3500.0, 4000.0, 4500.0, 5000.0}};
+    static constexpr std::array<double,NUMBER_OF_SAMPLE_POINTS> xData = 
+            {{0.0000000000000e+00, 8.7652737082527e+00, 2.3294562921324e+01, 5.4184774233564e+01,
+              7.8809463502726e+01, 2.2429199943857e+02, 4.6798107411288e+02, 7.2296127461536e+02, 
+              1.1658971129082e+03, 1.6286476514445e+03, 2.1076047703808e+03, 2.5997463219921e+03, 
+              3.6154681137081e+03, 4.6644290903876e+03, 5.7398811747011e+03, 6.8373640504590e+03, 
+              7.9537073133201e+03, 1.0234022966195e+04, 1.1979574602097e+04, 1.3750942900204e+04, 
+              1.5545134905888e+04, 1.7359780637619e+04, 1.9807850068644e+04, 2.2285219477338e+04, 
+              2.4788948528427e+04, 2.7316633948913e+04, 2.9866274540736e+04, 3.2436177975259e+04, 
+              3.5024894352307e+04, 3.7631167553565e+04, 4.2892118831955e+04, 4.8211670442755e+04, 
+              6.1730908478994e+04, 7.5515087179925e+04, 8.9519590674471e+04, 1.0371270861601e+05, 
+              1.1807073118603e+05, 1.3257525485198e+05}};
 
 protected:
 

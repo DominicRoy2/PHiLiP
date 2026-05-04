@@ -1258,7 +1258,7 @@ template <int dim, int nspecies, int nstate, typename real>
 std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
 ::dissipative_flux_dot_normal_on_adiabatic_boundary (
         const std::array<real,nstate> &solution,
-        const std::array<dealii::Tensor<1,dim,real>,nstate> &solution_gradient,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> &/*solution_gradient*/,
         const std::array<real,nstate> &/*filtered_solution*/,
         const std::array<dealii::Tensor<1,dim,real>,nstate> &/*filtered_solution_gradient*/,
         const dealii::types::global_dof_index /*cell_index*/,
@@ -1268,7 +1268,7 @@ std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
     This means that for a channel flow with a uniform grid, this is solution is 
     at a distance dy = domain_length_y/(number_of_elements_y_direction) from the wall.
     */
-    pcout<<"dissipative_flux_dot_normal_on_adiabatic_boundary for WMLES."<<std::endl;
+    //this->pcout<<"dissipative_flux_dot_normal_on_adiabatic_boundary for WMLES."<<std::endl;
     // Get the wall parallel velocities; equivalent Frere thesis eq.(2.40)
     const dealii::Tensor<1,dim,real> velocities_parallel_to_wall = this->template compute_velocities_parallel_to_wall<real>(solution,normal);
 
@@ -1286,7 +1286,7 @@ std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
     const real viscosity_coefficient = this->template compute_viscosity_coefficient<real>(primitive_soln);
     const real density = solution[0];
     const real wall_shear_stress_magnitude =
-            this->wall_model_look_up_table->get_wall_shear_stress_magnitude(
+            this->get_wall_shear_stress_magnitude(
                     velocity_parallel_to_wall,
                     this->distance_from_wall_for_wall_model_input_velocity,
                     viscosity_coefficient,
@@ -1440,6 +1440,68 @@ void NavierStokes<dim,nspecies,nstate,real>
         soln_grad_bc[istate] = boundary_gradients[istate];
     }
 }
+
+template <int dim, int nspecies, int nstate, typename real>
+real NavierStokes<dim,nspecies,nstate,real>
+::get_velocity_component_parallel_to_wall_from_solution_and_normal_vector (
+        const std::array<real,nstate> &conservative_soln,
+        const dealii::Tensor<1,dim,real> &normal_vector) const
+{
+    // Get the wall parallel velocities; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> velocities_parallel_to_wall = this->template compute_velocities_parallel_to_wall<real>(conservative_soln,normal_vector);
+
+    // Get wall tangent vector; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> wall_tangent_vector = this->template compute_wall_tangent_vector_from_velocities_parallel_to_wall<real>(velocities_parallel_to_wall);
+
+    // Get wall parallel velocity component; Frere thesis eq.(2.41)
+    real velocity_parallel_to_wall = 0.0;
+    for (int d=0; d<dim; ++d) {
+        velocity_parallel_to_wall += velocities_parallel_to_wall[d]*wall_tangent_vector[d];
+    }
+    return velocity_parallel_to_wall;
+}
+
+template <int dim, int nspecies, int nstate, typename real>
+real NavierStokes<dim,nspecies,nstate,real>
+::get_wall_shear_stress_magnitude(
+    const real wall_parallel_velocity, 
+    const real distance, 
+    const real viscosity_coefficient,
+    const real density,
+    const double reynolds_number_inf) const
+{
+    const real u_parallel_plus_y_plus = reynolds_number_inf*density*distance*wall_parallel_velocity/viscosity_coefficient;
+    const real y_plus = this->interpolate(u_parallel_plus_y_plus,true);
+    const real wall_friction_velocity = y_plus*viscosity_coefficient/(density*distance*reynolds_number_inf);
+    const real wall_shear_stress = density*wall_friction_velocity*wall_friction_velocity;
+    return wall_shear_stress;
+}
+
+template <int dim, int nspecies, int nstate, typename real>
+real NavierStokes<dim,nspecies,nstate,real>::
+interpolate(const real x, const bool extrapolate) const
+{
+   int i = 0; // find left end of interval for interpolation
+   if ( x >= xData[NUMBER_OF_SAMPLE_POINTS - 2] ) // special case: beyond right end
+   {
+      i = NUMBER_OF_SAMPLE_POINTS - 2;
+   }
+   else
+   {
+      while ( x > xData[i+1] ) i++;
+   }
+   real xL = xData[i], yL = yData[i], xR = xData[i+1], yR = yData[i+1]; // points on either side (unless beyond ends)
+   if ( !extrapolate ) // if beyond ends of array and not extrapolating
+   {
+      if ( x < xL ) yR = yL;
+      if ( x > xR ) yL = yR;
+   }
+
+   real dydx = ( yR - yL ) / ( xR - xL ); // gradient
+
+   return yL + dydx * ( x - xL ); // linear interpolation
+}
+
 
 template <int dim, int nspecies, int nstate, typename real>
 dealii::Vector<double> NavierStokes<dim,nspecies,nstate,real>::post_compute_derived_quantities_vector (
