@@ -1225,7 +1225,7 @@ std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
     std::array<real,nstate> dissipative_flux_dot_normal;
     // Associated thermal boundary condition
     if((on_boundary && (thermal_boundary_condition_type == thermal_boundary_condition_enum::adiabatic))
-        && (boundary_type == 1001)) { 
+        && (boundary_type == 1001 || boundary_type == 1006)) { 
 
         /** If adiabatic on no-slip (1001) wall BCs */
         // adiabatic boundary
@@ -1264,46 +1264,41 @@ std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
         const dealii::types::global_dof_index /*cell_index*/,
         const dealii::Tensor<1,dim,real> &normal)
 {
-    std::array<real,nstate> dissipative_flux_dot_normal;
-    
-    /** If adiabatic on no-slip (1001) wall BCs */
-    // adiabatic boundary
-    // --> Modify viscous flux such that normal_vector dot gradient of temperature must be zero
+    /* Input variable 'solution' is actually solution at the wall element opposing face.
+    This means that for a channel flow with a uniform grid, this is solution is 
+    at a distance dy = domain_length_y/(number_of_elements_y_direction) from the wall.
+    */
+    pcout<<"dissipative_flux_dot_normal_on_adiabatic_boundary for WMLES."<<std::endl;
+    // Get the wall parallel velocities; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> velocities_parallel_to_wall = this->template compute_velocities_parallel_to_wall<real>(solution,normal);
 
-    // REFERENCES:
-    /* (1) Masatsuka 2018 "I do like CFD", p.148, eq.(4.12.1-4.12.4)
-     * (2) For the boundary condition case, refer to the equation above equation 458 of the following paper:
-     *  Hartmann, Ralf. "Numerical analysis of higher order discontinuous Galerkin finite element methods." (2008): 1-107.
-     */
+    // Get wall tangent vector; equivalent Frere thesis eq.(2.40)
+    const dealii::Tensor<1,dim,real> wall_tangent_vector = this->template compute_wall_tangent_vector_from_velocities_parallel_to_wall<real>(velocities_parallel_to_wall);
 
-    // Step 1: Primitive solution
-    const std::array<real,nstate> primitive_soln = this->template convert_conservative_to_primitive_templated<real>(solution); // from Euler
-    
-    // Step 2: Gradient of primitive solution
-    const std::array<dealii::Tensor<1,dim,real>,nstate> primitive_soln_gradient = this->template convert_conservative_gradient_to_primitive_gradient_templated<real>(solution, solution_gradient);
-    
-    // Step 3: Viscous stress tensor, Velocities, Heat flux
-    const dealii::Tensor<2,dim,real> viscous_stress_tensor = compute_viscous_stress_tensor<real>(primitive_soln, primitive_soln_gradient);
-    const dealii::Tensor<1,dim,real> vel = this->template extract_velocities_from_primitive<real>(primitive_soln); // from Euler
-    /* ---> Impose adiabatic boundary condition by modifying the heat flux. */
-    dealii::Tensor<1,dim,real> heat_flux;
-    for (int flux_dim=0; flux_dim<dim; ++flux_dim) {
-        // set the heat flux to zero since we want the normal dot gradient of temperature to be zero for an adiabatic boundary
-        heat_flux[flux_dim] = 0.0;
+    // Get wall parallel velocity component; Frere thesis eq.(2.41)
+    real velocity_parallel_to_wall = 0.0;
+    for (int d=0; d<dim; ++d) {
+        velocity_parallel_to_wall += velocities_parallel_to_wall[d]*wall_tangent_vector[d];
     }
 
-    // Step 4: Construct viscous flux; Note: sign corresponds to LHS
-    std::array<dealii::Tensor<1,dim,real>,nstate> dissipative_flux;
-    dissipative_flux = dissipative_flux_given_velocities_viscous_stress_tensor_and_heat_flux<real>(vel,viscous_stress_tensor,heat_flux);
+    // Get wall shear stress magnitude from wall model
+    const std::array<real, nstate> primitive_soln = this->template convert_conservative_to_primitive_templated<real>(solution);
+    const real viscosity_coefficient = this->template compute_viscosity_coefficient<real>(primitive_soln);
+    const real density = solution[0];
+    const real wall_shear_stress_magnitude =
+            this->wall_model_look_up_table->get_wall_shear_stress_magnitude(
+                    velocity_parallel_to_wall,
+                    this->distance_from_wall_for_wall_model_input_velocity,
+                    viscosity_coefficient,
+                    density,
+                    this->reynolds_number_inf);
 
-    // compute the dot product with the normal vector
+    // Compute the dissipative flux dot normal vector; Frere thesis eq.(2.39)
+    std::array<real,nstate> dissipative_flux_dot_normal;    
     dissipative_flux_dot_normal.fill(0.0); // initialize
-    for (int s=0; s<nstate; s++) {
-        for (int d=0; d<dim; ++d) {
-            dissipative_flux_dot_normal[s] += dissipative_flux[s][d] * normal[d];//compute dot product
-        }
+    for (int d=0; d<dim; ++d) {
+        dissipative_flux_dot_normal[1+d] += wall_shear_stress_magnitude * wall_tangent_vector[d]; // Frere thesis eq.(2.39)
     }
-
     return dissipative_flux_dot_normal;
 }
 
