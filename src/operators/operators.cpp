@@ -2286,6 +2286,78 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     M_inv.mmult(this->oneD_surf_operator[iface], tmp1);
 }
 
+template <int dim, int n_faces>
+void surface_projection_operator<dim,n_faces>::project_flux(
+    const std::vector<std::vector<double>> &flux,
+    std::vector<double> &projected_int,
+    std::vector<double> &projected_ext,
+    const dealii::FullMatrix<double> &P,
+    const dealii::FullMatrix<double> &I)
+{
+    const unsigned int Nl = P.m(); // low
+    const unsigned int Nh = P.n(); // high
+
+    std::fill(projected_int.begin(),
+              projected_int.end(), 0.0);
+
+    std::fill(projected_ext.begin(),
+              projected_ext.end(), 0.0);
+
+    if constexpr (dim == 2){
+        // 2D volume -> 1D face
+
+        for (unsigned int i = 0; i < Nl; ++i)
+        {
+            for (unsigned int j = 0; j < Nh; ++j)
+            {
+                const double fij = flux[i][j];
+
+                projected_int[j] +=
+                    I(j,i) * fij;
+
+                projected_ext[i] +=
+                    P(i,j) * fij;
+            }
+        }
+    }
+    if constexpr (dim == 3){
+        // 3D volume -> 2D face
+
+        for (unsigned int iy = 0; iy < Nl; ++iy)
+        {
+            for (unsigned int ix = 0; ix < Nl; ++ix)
+            {
+                const unsigned int i =
+                    iy * Nl + ix;
+
+                for (unsigned int jy = 0; jy < Nh; ++jy)
+                {
+                    for (unsigned int jx = 0; jx < Nh; ++jx)
+                    {
+                        const unsigned int j =
+                            jy * Nh + jx;
+
+                        const double P_product =
+                            P(ix,jx) * P(iy,jy);
+
+                        const double I_product =
+                            I(jx,ix) * I(jy,iy);
+
+                        const double fij =
+                            flux[i][j];
+
+                        projected_int[j] +=
+                            I_product * fij;
+
+                        projected_ext[i] +=
+                            P_product * fij;
+                    }
+                }
+            }
+        }
+    }
+}
+
 template <int dim, int n_faces>  
 surface_interpolation_operator<dim,n_faces>::surface_interpolation_operator(
     const int nstate_input,
