@@ -2226,42 +2226,13 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     // std::cout << "\nn_q_low: "<<n_q_low;
     // std::cout << "\nn_dofs: "<<n_dofs;
     const std::vector<double> &w_high = quad_high_1D.get_weights();
-    const std::vector<double> &w_low  = quad_low_1D.get_weights();
 
-    dealii::FullMatrix<double> V_L(n_dofs, n_dofs);
-    for (unsigned int i = 0; i < n_q_low; ++i){
-        const auto &xq = quad_low_1D.point(i);
-
-        for (unsigned int j = 0; j < n_dofs; ++j)
-             V_L(i, j) =
-                fe_low.shape_value(j, xq);
-    }
-
-    dealii::FullMatrix<double> M_L(n_q_low, n_q_low);
-    M_L = 0;
-    // dealii::FullMatrix<double> W_L(n_q_low, n_q_low);
-    // W_L = 0;
-    for (unsigned int q = 0; q < n_q_low; ++q){
-        //W_L(q,q) = w_low[q];
-        for (unsigned int i = 0; i < n_dofs; ++i){
-            for (unsigned int j = 0; j < n_dofs; ++j){
-                M_L(i,j) += V_L(q,i)*V_L(q,j)*w_low[q];
-            }
-        }
-    }
-    // //std::cout <<"\n"<<std::endl;
-    // for (unsigned int i = 0; i < n_dofs; ++i){
-    //     for (unsigned int j = 0; j < n_dofs; ++j){
-    //         // std::cout << "\nW_L("<<i<<","<<j<<"): "<<W_L(i,j);
-    //         // std::cout << "\nM_L("<<i<<","<<j<<"): "<<M_L(i,j);
-    //         if(M_L(i,j)-W_L(i,j)>1e-14){
-    //             std::cout << "\nERROR, Mass MATRIX NOT COMPUTED Correctly";
-    //         }
-    //     }
-    // }
-
-    dealii::FullMatrix<double> M_inv(n_q_low, n_q_low);
-    M_inv.invert(M_L);
+    basis_functions<dim,n_faces> basis_low(this->nstate, this->max_degree, this->max_grid_degree);
+    basis_low.build_1D_volume_operator(fe_low, quad_low_1D);
+    local_mass<dim,n_faces> local_Mass_Matrix(this->nstate, this->max_degree, this->max_grid_degree);
+    local_Mass_Matrix.build_1D_volume_operator(fe_low, quad_low_1D);
+    dealii::FullMatrix<double> M_inv(n_dofs);
+    M_inv.invert(local_Mass_Matrix.oneD_vol_operator);
 
     dealii::FullMatrix<double> W_H(n_q_high, n_q_high);
     W_H = 0;
@@ -2283,25 +2254,27 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
 
     this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
     dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
-    M_inv.mmult(this->oneD_surf_operator[iface], tmp1);
+    M_inv.mmult(tmp2, tmp1);
+    basis_low.oneD_vol_operator.mmult(this->oneD_surf_operator[iface], tmp2);
+
 }
 
 template <int dim, int n_faces>
 void surface_projection_operator<dim,n_faces>::project_flux(
-    const std::vector<std::vector<double>> &flux,
-    std::vector<double> &projected_int,
-    std::vector<double> &projected_ext,
+    const dealii::FullMatrix<double> &flux,
+    std::vector<double> &projected_high,
+    std::vector<double> &projected_low,
     const dealii::FullMatrix<double> &P,
     const dealii::FullMatrix<double> &I)
 {
     const unsigned int Nl = P.m(); // low
     const unsigned int Nh = P.n(); // high
 
-    std::fill(projected_int.begin(),
-              projected_int.end(), 0.0);
+    std::fill(projected_high.begin(),
+              projected_high.end(), 0.0);
 
-    std::fill(projected_ext.begin(),
-              projected_ext.end(), 0.0);
+    std::fill(projected_low.begin(),
+              projected_low.end(), 0.0);
 
     if constexpr (dim == 2){
         // 2D volume -> 1D face
@@ -2312,10 +2285,10 @@ void surface_projection_operator<dim,n_faces>::project_flux(
             {
                 const double fij = flux[i][j];
 
-                projected_int[j] +=
+                projected_high[j] +=
                     I(j,i) * fij;
 
-                projected_ext[i] +=
+                projected_low[i] +=
                     P(i,j) * fij;
             }
         }
@@ -2346,10 +2319,10 @@ void surface_projection_operator<dim,n_faces>::project_flux(
                         const double fij =
                             flux[i][j];
 
-                        projected_int[j] +=
+                        projected_high[j] +=
                             I_product * fij;
 
-                        projected_ext[i] +=
+                        projected_low[i] +=
                             P_product * fij;
                     }
                 }

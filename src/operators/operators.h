@@ -1020,9 +1020,9 @@ public:
             const unsigned int iface);
 
     void project_flux(
-        const std::vector<std::vector<double>> &flux,
-        std::vector<double> &projected_int,
-        std::vector<double> &projected_ext,
+        const dealii::FullMatrix<double> &flux,
+        std::vector<double> &projected_high,
+        std::vector<double> &projected_low,
         const dealii::FullMatrix<double> &P,
         const dealii::FullMatrix<double> &I);
 };
