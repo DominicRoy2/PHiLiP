@@ -1018,6 +1018,13 @@ public:
             const dealii::Quadrature<1> &face_quadrature_high,
             const dealii::Quadrature<1> &face_quadrature_low,
             const unsigned int iface);
+
+    void project_flux(
+        const std::vector<std::vector<double>> &flux,
+        std::vector<double> &projected_int,
+        std::vector<double> &projected_ext,
+        const dealii::FullMatrix<double> &P,
+        const dealii::FullMatrix<double> &I);
 };
 
 
