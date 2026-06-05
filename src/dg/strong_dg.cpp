@@ -3733,7 +3733,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
 
                 //Project on face
                 projection_oper.project_flux(conv_2pt_num_flux_dot_n[istate], conv_num_flux_dot_n_projected_int[istate], conv_num_flux_dot_n_projected_ext[istate], P, I);
-                projection_oper.project_flux(conv_2pt_num_flux_dot_n[istate], diss_auxi_num_flux_dot_n_projected_int[istate], diss_auxi_num_flux_dot_n_projected_ext[istate], P, I);
+                projection_oper.project_flux(diss_num_flux_dot_n[istate], diss_auxi_num_flux_dot_n_projected_int[istate], diss_auxi_num_flux_dot_n_projected_ext[istate], P, I);
             }
         }else{
             OPERATOR::surface_projection_operator<dim,2*dim> projection_oper(1, this->max_degree, this->max_grid_degree);
@@ -3755,7 +3755,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                 
                 //Project on face
                 projection_oper.project_flux(conv_2pt_num_flux_dot_n[istate], conv_num_flux_dot_n_projected_ext[istate], conv_num_flux_dot_n_projected_int[istate], P, I);
-                projection_oper.project_flux(conv_2pt_num_flux_dot_n[istate], diss_auxi_num_flux_dot_n_projected_ext[istate], diss_auxi_num_flux_dot_n_projected_int[istate], P, I);
+                projection_oper.project_flux(diss_num_flux_dot_n[istate], diss_auxi_num_flux_dot_n_projected_ext[istate], diss_auxi_num_flux_dot_n_projected_int[istate], P, I);
             }
         }
     }else{

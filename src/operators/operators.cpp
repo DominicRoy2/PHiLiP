@@ -2296,16 +2296,16 @@ void surface_projection_operator<dim,n_faces>::project_flux(
     if constexpr (dim == 3){
         // 3D volume -> 2D face
 
-        for (unsigned int iy = 0; iy < Nl; ++iy)
+        for (unsigned int ix = 0; ix < Nl; ++ix)
         {
-            for (unsigned int ix = 0; ix < Nl; ++ix)
+            for (unsigned int iy = 0; iy < Nl; ++iy)
             {
                 const unsigned int i =
                     iy * Nl + ix;
 
-                for (unsigned int jy = 0; jy < Nh; ++jy)
+                for (unsigned int jx = 0; jx < Nh; ++jx)
                 {
-                    for (unsigned int jx = 0; jx < Nh; ++jx)
+                    for (unsigned int jy = 0; jy < Nh; ++jy)
                     {
                         const unsigned int j =
                             jy * Nh + jx;
