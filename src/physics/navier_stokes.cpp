@@ -1370,6 +1370,12 @@ void NavierStokes<dim,nspecies,nstate,real>
             soln_bc[istate] = soln_int[istate];
             soln_grad_bc[istate] = soln_grad_int[istate];
         }
+    } 
+    else {
+        for (int istate=0; istate<nstate; ++istate) {
+            soln_bc[istate] = soln_int[istate];
+            soln_grad_bc[istate] = soln_grad_int[istate];
+        }
     }
 }
 
