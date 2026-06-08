@@ -64,3 +64,15 @@ set(TEST_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 #  WORKING_DIRECTORY ${TEST_OUTPUT_DIR}
 # )
 # ----------------------------------------
+
+# =======================================
+# SD7003 Airfoil
+# =======================================
+# ----------------------------------------
+configure_file(unsteady_airfoil_wmles.prm unsteady_airfoil_wmles.prm COPYONLY)
+add_test(
+ NAME MPI_3D_AIRFOIL_WMLES
+ COMMAND mpirun -np ${MPIMAX} ${EXECUTABLE_OUTPUT_PATH}/PHiLiP_3D -i ${CMAKE_CURRENT_BINARY_DIR}/unsteady_airfoil_wmles.prm
+ WORKING_DIRECTORY ${TEST_OUTPUT_DIR}
+)
+# ----------------------------------------
