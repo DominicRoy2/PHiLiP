@@ -3667,11 +3667,9 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                 // Note that the facet determinant of metric jacobian is the above norm multiplied by the determinant of the metric Jacobian evaluated on the facet.
                 // Since the determinant of the metric Jacobian evaluated on the face cancels off, we can just scale the numerical flux by the norm.
                 std::array<real,nstate> conv_num_flux_dot_n_at_q;
-                std::array<real,nstate> conv_num_flux_dot_n_at_q_inverse;
                 std::array<real,nstate> diss_auxi_num_flux_dot_n_at_q;
                 // Convective numerical flux. 
                 conv_num_flux_dot_n_at_q = this->conv_num_flux_double->evaluate_flux(soln_state_int, soln_state_ext, unit_phys_normal_int);
-                conv_num_flux_dot_n_at_q_inverse = this->conv_num_flux_double->evaluate_flux(soln_state_ext, soln_state_int, unit_phys_normal_int);
                 
                 diss_auxi_num_flux_dot_n_at_q = this->diss_num_flux_double->evaluate_auxiliary_flux(
                     current_cell_index, neighbor_cell_index,
@@ -3690,8 +3688,13 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                     // We need the values to have their inner elements be vectors of n_face_quad_pts.
 
                     // write data
-                    conv_2pt_num_flux_dot_n[istate][iquad_ext][iquad_int] = face_Jac_norm_scaled * conv_num_flux_dot_n_at_q[istate];
-                    diss_num_flux_dot_n[istate][iquad_ext][iquad_int] = face_Jac_norm_scaled * diss_auxi_num_flux_dot_n_at_q[istate];
+                    if(poly_degree_int>poly_degree_ext){
+                        conv_2pt_num_flux_dot_n[istate][iquad_ext][iquad_int] = face_Jac_norm_scaled * conv_num_flux_dot_n_at_q[istate];
+                        diss_num_flux_dot_n[istate][iquad_ext][iquad_int] = face_Jac_norm_scaled * diss_auxi_num_flux_dot_n_at_q[istate];
+                    }else{
+                        conv_2pt_num_flux_dot_n[istate][iquad_int][iquad_ext] = face_Jac_norm_scaled * conv_num_flux_dot_n_at_q[istate];
+                        diss_num_flux_dot_n[istate][iquad_int][iquad_ext] = face_Jac_norm_scaled * diss_auxi_num_flux_dot_n_at_q[istate];                    
+                    }
                     // pcout<<"diss_num_flux_dot_n["<<istate<<"]["<<iquad_int<<"]["<<iquad_ext<<"]: "<<diss_num_flux_dot_n[istate][iquad_int][iquad_ext]<<std::endl;
                     // pcout<<"soln_interp_to_face_int["<<istate<<"]: "<<soln_interp_to_face_int[istate]<<std::endl;
                     // pcout<<"soln_interp_to_face_ext["<<istate<<"]: "<<soln_interp_to_face_ext[istate]<<std::endl;
