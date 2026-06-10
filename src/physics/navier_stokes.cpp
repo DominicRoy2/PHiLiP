@@ -1370,6 +1370,14 @@ void NavierStokes<dim,nspecies,nstate,real>
         // Wall boundary condition
         boundary_wall_viscous_flux (normal_int, soln_int, soln_grad_int, soln_bc, soln_grad_bc);
     }
+    else if (boundary_type == 1004) {
+        // Riemann-based farfield boundary condition
+        this->boundary_riemann (normal_int, soln_int, soln_bc);
+    } 
+    else if (boundary_type == 1005) {
+        // Simple farfield boundary condition
+        this->boundary_farfield(soln_bc);
+    } 
     else if (boundary_type == 1006)
     {
         /* Reference: Brian Vermeire's thesis 2014 Equations 3.72-3.73
@@ -1384,6 +1392,10 @@ void NavierStokes<dim,nspecies,nstate,real>
             soln_bc[istate] = soln_int[istate];
             soln_grad_bc[istate] = soln_grad_int[istate];
         }
+    }
+    else {
+        this->pcout << "Invalid boundary_type: " << boundary_type <<" not implemented for viscous flows."<<std::endl;
+        std::abort();
     }
 }
 
