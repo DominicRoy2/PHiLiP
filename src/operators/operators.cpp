@@ -2215,22 +2215,22 @@ void surface_projection_operator<dim,n_faces>::compute_local_surface_projection_
 template <int dim, int n_faces>
 void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     const dealii::FESystem<1,1> &fe_low,
-    const dealii::Quadrature<1> &quad_high_1D,
-    const dealii::Quadrature<1> &quad_low_1D,
+    const dealii::Quadrature<1> &face_quadrature_high,
+    const dealii::Quadrature<1> &face_quadrature_low,
     const unsigned int iface)
 {
-    const unsigned int n_q_high = quad_high_1D.size();
-    const unsigned int n_q_low  = quad_low_1D.size();
+    const unsigned int n_q_high = face_quadrature_high.size();
+    const unsigned int n_q_low  = face_quadrature_low.size();
     const unsigned int n_dofs   = fe_low.dofs_per_cell;
     // std::cout << "\nn_q_high: "<<n_q_high;
     // std::cout << "\nn_q_low: "<<n_q_low;
     // std::cout << "\nn_dofs: "<<n_dofs;
-    const std::vector<double> &w_high = quad_high_1D.get_weights();
+    const std::vector<double> &w_high = face_quadrature_high.get_weights();
 
     basis_functions<dim,n_faces> basis_low(this->nstate, this->max_degree, this->max_grid_degree);
-    basis_low.build_1D_volume_operator(fe_low, quad_low_1D);
+    basis_low.build_1D_volume_operator(fe_low, face_quadrature_low);
     local_mass<dim,n_faces> local_Mass_Matrix(this->nstate, this->max_degree, this->max_grid_degree);
-    local_Mass_Matrix.build_1D_volume_operator(fe_low, quad_low_1D);
+    local_Mass_Matrix.build_1D_volume_operator(fe_low, face_quadrature_low);
     dealii::FullMatrix<double> M_inv(n_dofs);
     M_inv.invert(local_Mass_Matrix.oneD_vol_operator);
 
@@ -2242,7 +2242,7 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     }
     dealii::FullMatrix<double> V_L_at_high(n_q_high, n_dofs);
     for (unsigned int i = 0; i < n_q_high; ++i){
-        const auto &xq = quad_high_1D.point(i);
+        const auto &xq = face_quadrature_high.point(i);
 
         for (unsigned int j = 0; j < n_dofs; ++j)
              V_L_at_high(i, j) =
