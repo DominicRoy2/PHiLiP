@@ -2253,8 +2253,8 @@ void surface_projection_operator<dim,n_faces>::build_1D_surface_operator(
     V_L_at_high.Tmmult(tmp1, W_H);
 
     this->oneD_surf_operator[iface].reinit(n_q_low, n_q_high);
-    dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);   // M^{-1} * ...
-    M_inv.mmult(tmp2, tmp1);
+    dealii::FullMatrix<double> tmp2(n_dofs, n_q_high);
+    M_inv.mmult(tmp2, tmp1); // M^{-1} * ...
     basis_low.oneD_vol_operator.mmult(this->oneD_surf_operator[iface], tmp2);
 
 }
@@ -2344,21 +2344,25 @@ surface_interpolation_operator<dim,n_faces>::surface_interpolation_operator(
 
 template <int dim, int n_faces>
 void surface_interpolation_operator<dim,n_faces>::build_1D_surface_operator(
+    const dealii::FESystem<1,1> &fe_high,
     const dealii::FESystem<1,1> &fe_low,
-    const dealii::Quadrature<1> &quad_high_1D,
-    const dealii::Quadrature<1> &quad_low_1D,
+    const dealii::Quadrature<1> &face_quadrature_high,
+    const dealii::Quadrature<1> &face_quadrature_low,
     const unsigned int iface)
 {
-    const unsigned int n_q_high = quad_high_1D.size();
-    const unsigned int n_q_low  = quad_low_1D.size();
+    const unsigned int n_q_high = face_quadrature_high.size();
+    const unsigned int n_q_low  = face_quadrature_low.size();
+    basis_functions<dim,n_faces> basis_high(this->nstate, this->max_degree, this->max_grid_degree);
+    basis_high.build_1D_volume_operator(fe_high, face_quadrature_high);
+    dealii::FullMatrix<double> tmp1(n_q_high, n_q_low);
     this->oneD_surf_operator[iface].reinit(n_q_high, n_q_low);
     for (unsigned int i = 0; i < n_q_high; ++i){
-        const auto &xq = quad_high_1D.point(i);
+        const auto &xq = face_quadrature_high.point(i);
 
         for (unsigned int j = 0; j < n_q_low; ++j)
-            this->oneD_surf_operator[iface](i,j) =
-                fe_low.shape_value(j, xq);
+            tmp1(i, j) = fe_low.shape_value(j, xq);
     }
+    basis_high.oneD_vol_operator.mmult(this->oneD_surf_operator[iface], tmp1);
 }
 
 template <int dim, int n_faces>  

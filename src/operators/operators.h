@@ -1047,7 +1047,8 @@ public:
 
     ///Assembles the one dimensional operator.
     void build_1D_surface_operator(
-            const dealii::FESystem<1,1> &finite_element,
+            const dealii::FESystem<1,1> &finite_element_high,
+            const dealii::FESystem<1,1> &finite_element_low,
             const dealii::Quadrature<1> &face_quadrature_high,
             const dealii::Quadrature<1> &face_quadrature_low,
             const unsigned int iface);

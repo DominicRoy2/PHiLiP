@@ -3598,7 +3598,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
             const int neighbor_iface_1D = neighbor_iface % 2;//the reference neighbour face number
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], face_quadrature_high, face_quadrature_low, neighbor_iface_1D);
-            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], face_quadrature_high, face_quadrature_low, neighbor_iface_1D);
+            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], this->oneD_fe_collection_1state[poly_degree_ext], face_quadrature_high, face_quadrature_low, neighbor_iface_1D);
             for(int istate=0; istate<nstate; istate++){
                 diss_auxi_num_flux_dot_n_projected_int[istate].resize(n_max_face_quad_pts);
                 diss_auxi_num_flux_dot_n_projected_ext[istate].resize(n_min_face_quad_pts);
@@ -3617,7 +3617,7 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
             OPERATOR::surface_interpolation_operator<dim,2*dim> interpolation_oper(1, this->max_degree, this->max_grid_degree);
             const int iface_1D = iface % 2;//the reference face number
             projection_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], face_quadrature_high, face_quadrature_low, iface_1D);
-            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_int], face_quadrature_high, face_quadrature_low, iface_1D);
+            interpolation_oper.build_1D_surface_operator(this->oneD_fe_collection_1state[poly_degree_ext], this->oneD_fe_collection_1state[poly_degree_int], face_quadrature_high, face_quadrature_low, iface_1D);
             for(int istate=0; istate<nstate; istate++){
                 diss_auxi_num_flux_dot_n_projected_int[istate].resize(n_min_face_quad_pts);
                 diss_auxi_num_flux_dot_n_projected_ext[istate].resize(n_max_face_quad_pts);
