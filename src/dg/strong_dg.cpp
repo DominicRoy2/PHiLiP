@@ -3684,43 +3684,22 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                 soln_basis_int.oneD_vol_operator,
                                                 true, 1.0);//adding=true, subtract the negative so add it
         // convective numerical flux
-        if(poly_degree_int<poly_degree_ext){
-            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-                                                    iface, n_quad_pts_1D_int,
-                                                    conv_num_flux_dot_n_projected_int[istate], //conv_num_flux_dot_n_projected_at_q[istate], 
-                                                    surf_quad_weights_int, rhs_int, 
-                                                    soln_basis_int.oneD_surf_operator, 
-                                                    soln_basis_int.oneD_vol_operator,
-                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
-        }else{
-            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-                                                    iface, n_quad_pts_1D_int,
-                                                    conv_num_flux_dot_n_projected_int[istate], 
-                                                    surf_quad_weights_int, rhs_int, 
-                                                    soln_basis_int.oneD_surf_operator, 
-                                                    soln_basis_int.oneD_vol_operator,
-                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
-        }
+        soln_basis_int.inner_product_surface_1D(face_orientation_int, 
+                                                iface, n_quad_pts_1D_int,
+                                                conv_num_flux_dot_n_projected_int[istate], //conv_num_flux_dot_n_projected_at_q[istate], 
+                                                surf_quad_weights_int, rhs_int, 
+                                                soln_basis_int.oneD_surf_operator, 
+                                                soln_basis_int.oneD_vol_operator,
+                                                true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
 
-        if(poly_degree_int<poly_degree_ext){
-            // dissipative numerical flux
-            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-                                                    iface, n_quad_pts_1D_int,
-                                                    diss_auxi_num_flux_dot_n_projected_int[istate], 
-                                                    surf_quad_weights_int, rhs_int, 
-                                                    soln_basis_int.oneD_surf_operator, 
-                                                    soln_basis_int.oneD_vol_operator,
-                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
-        }else{
-            // dissipative numerical flux
-            soln_basis_int.inner_product_surface_1D(face_orientation_int, 
-                                                    iface, n_quad_pts_1D_int,
-                                                    diss_auxi_num_flux_dot_n_projected_int[istate], 
-                                                    surf_quad_weights_int, rhs_int, 
-                                                    soln_basis_int.oneD_surf_operator, 
-                                                    soln_basis_int.oneD_vol_operator,
-                                                    true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
-        }
+        // dissipative numerical flux
+        soln_basis_int.inner_product_surface_1D(face_orientation_int, 
+                                                iface, n_quad_pts_1D_int,
+                                                diss_auxi_num_flux_dot_n_projected_int[istate], 
+                                                surf_quad_weights_int, rhs_int, 
+                                                soln_basis_int.oneD_surf_operator, 
+                                                soln_basis_int.oneD_vol_operator,
+                                                true, -1.0);//adding=true, scaled by factor=-1.0 bc subtract it
 
         for(unsigned int ishape=0; ishape<n_shape_fns_int; ishape++){
             local_rhs_int_cell(istate*n_shape_fns_int + ishape) += rhs_int[ishape];
@@ -3764,43 +3743,23 @@ void DGStrong<dim,nstate,real,MeshType>::assemble_face_term_strong(
                                                 soln_basis_ext.oneD_surf_operator, 
                                                 soln_basis_ext.oneD_vol_operator,
                                                 true, 1.0);//adding=true
-        //convective numerical flux
-        if(poly_degree_int>poly_degree_ext){
-            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
-                                                    neighbor_iface, n_quad_pts_1D_ext,
-                                                    conv_num_flux_dot_n_projected_ext[istate], //conv_num_flux_dot_n_projected_at_q[istate], 
-                                                    surf_quad_weights_ext, rhs_ext, 
-                                                    soln_basis_ext.oneD_surf_operator, 
-                                                    soln_basis_ext.oneD_vol_operator,
-                                                    true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-        }else{
-            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
-                                        neighbor_iface, n_quad_pts_1D_ext,
-                                        conv_num_flux_dot_n_projected_ext[istate], 
-                                        surf_quad_weights_ext, rhs_ext, 
-                                        soln_basis_ext.oneD_surf_operator, 
-                                        soln_basis_ext.oneD_vol_operator,
-                                        true, 1.0);//adding=true, scaled by fac
-        }
+        // convective numerical flux
+        soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
+                                                neighbor_iface, n_quad_pts_1D_ext,
+                                                conv_num_flux_dot_n_projected_ext[istate], 
+                                                surf_quad_weights_ext, rhs_ext, 
+                                                soln_basis_ext.oneD_surf_operator, 
+                                                soln_basis_ext.oneD_vol_operator,
+                                                true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
 
-        if(poly_degree_int>poly_degree_ext){
-            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
+        // dissipative numerical flux
+        soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
                                                 neighbor_iface, n_quad_pts_1D_ext,
                                                 diss_auxi_num_flux_dot_n_projected_ext[istate], 
                                                 surf_quad_weights_ext, rhs_ext, 
                                                 soln_basis_ext.oneD_surf_operator, 
                                                 soln_basis_ext.oneD_vol_operator,
                                                 true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-        
-        }else{
-            soln_basis_ext.inner_product_surface_1D(face_orientation_ext, 
-                                                neighbor_iface, n_quad_pts_1D_ext,
-                                                diss_auxi_num_flux_dot_n_projected_ext[istate], 
-                                                surf_quad_weights_ext, rhs_ext, 
-                                                soln_basis_ext.oneD_surf_operator, 
-                                                soln_basis_ext.oneD_vol_operator,
-                                                true, 1.0);//adding=true, scaled by factor=1.0 because negative numerical flux and subtract it
-        }
 
         for(unsigned int ishape=0; ishape<n_shape_fns_ext; ishape++){
             local_rhs_ext_cell(istate*n_shape_fns_ext + ishape) += rhs_ext[ishape];
