@@ -391,6 +391,10 @@ void AllParameters::declare_parameters (dealii::ParameterHandler &prm)
     prm.declare_entry("chemistry_input_file", "",
                       dealii::Patterns::FileName(dealii::Patterns::FileName::FileType::input),
                       "Filename of the chemistry data file that contains the properties of the species used in simulation. (ex. H2_O2.kinetics");
+    
+    prm.declare_entry("using_wall_model", "false",
+                      dealii::Patterns::Bool(),
+                      "Flag for using wall model.");
 
     prm.declare_entry("wall_model_input_from_second_element", "true",
                       dealii::Patterns::Bool(),
@@ -663,6 +667,7 @@ const std::string test_string = prm.get("test_type");
     if (renumber_dofs_type_string == "CuthillMckee") { renumber_dofs_type = RenumberDofsType::CuthillMckee; }
 
     matching_surface_jac_det_tolerance = prm.get_double("matching_surface_jac_det_tolerance");
+    using_wall_model = prm.get_bool("using_wall_model");
     wall_model_input_from_second_element = prm.get_bool("wall_model_input_from_second_element");
     use_projected_entropy_variables_for_nsfr_boundary_term = prm.get_bool("use_projected_entropy_variables_for_nsfr_boundary_term");
 
