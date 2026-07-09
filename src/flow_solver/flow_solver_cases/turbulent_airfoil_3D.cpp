@@ -228,9 +228,9 @@ void Airfoil_3D_LES<dim, nstate>::compute_Reynolds_stress(
             dealii::Quadrature<1> vol_quad_equidistant_1D = dealii::QIterated<1>(dealii::QTrapez<1>(),poly_degree);
             const unsigned int n_quad_pts = pow(vol_quad_equidistant_1D.size(),dim);
             const unsigned int init_grid_degree = dg->high_order_grid->fe_system.tensor_degree();
-            OPERATOR::basis_functions<dim,2*dim> soln_basis(1, dg->max_degree, init_grid_degree); 
-            soln_basis.build_1D_volume_operator(dg->oneD_fe_collection_1state[dg->max_degree], vol_quad_equidistant_1D);
-            soln_basis.build_1D_gradient_operator(dg->oneD_fe_collection_1state[dg->max_degree], vol_quad_equidistant_1D);                
+            OPERATOR::basis_functions<dim,2*dim> soln_basis(1,poly_degree, init_grid_degree); 
+            soln_basis.build_1D_volume_operator(dg->oneD_fe_collection_1state[poly_degree], vol_quad_equidistant_1D);
+            soln_basis.build_1D_gradient_operator(dg->oneD_fe_collection_1state[poly_degree], vol_quad_equidistant_1D);                
             // Store solution coeffs for time-averaged flutuating quantitites
             std::array<std::vector<double>,nstate> soln_coeff;
             std::array<std::vector<double>,nstate> time_averaged_soln_coeff;
