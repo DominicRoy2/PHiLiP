@@ -1364,24 +1364,28 @@ void NavierStokes<dim,nspecies,nstate,real>
         // Simple farfield boundary condition
         this->boundary_farfield(soln_bc);
     }
-    else if (boundary_type == 1006)
-    {
-        /* Reference: Brian Vermeire's thesis 2014 Equations 3.72-3.73
-           For slip wall boundary conditions, we require that the 
-           viscous fluxes across the boundary are negligible. 
-           To do this, we can simply project the solution vector
-           and the gradient from the interior point onto the boundary.
-           This effectively eliminates the penalty term at the 
-           boundary for both the gradient and flux terms.
-        */
+    // else if (boundary_type == 1006)
+    // {
+    //     /* Reference: Brian Vermeire's thesis 2014 Equations 3.72-3.73
+    //        For slip wall boundary conditions, we require that the 
+    //        viscous fluxes across the boundary are negligible. 
+    //        To do this, we can simply project the solution vector
+    //        and the gradient from the interior point onto the boundary.
+    //        This effectively eliminates the penalty term at the 
+    //        boundary for both the gradient and flux terms.
+    //     */
+    //     for (int istate=0; istate<nstate; ++istate) {
+    //         soln_bc[istate] = soln_int[istate];
+    //         soln_grad_bc[istate] = soln_grad_int[istate];
+    //     }
+    // }
+    else {
         for (int istate=0; istate<nstate; ++istate) {
             soln_bc[istate] = soln_int[istate];
             soln_grad_bc[istate] = soln_grad_int[istate];
         }
-    } 
-    else {
-        this->pcout << "Invalid boundary_type: " << boundary_type <<" not implemented for viscous flows."<<std::endl;
-        std::abort();
+        // this->pcout << "Invalid boundary_type: " << boundary_type <<" not implemented for viscous flows."<<std::endl;
+        // std::abort();
     }
 }
 

@@ -1,6 +1,7 @@
 #include <cmath>
 #include <vector>
 #include <boost/preprocessor/seq/for_each.hpp>
+#include <random>
 
 #include "ADTypes.hpp"
 
@@ -1326,6 +1327,132 @@ void Euler<dim,nspecies,nstate,real>
 
 template <int dim, int nspecies, int nstate, typename real>
 void Euler<dim,nspecies,nstate,real>
+::boundary_inflow_turbulent_BL (
+   const dealii::Point<dim, real> &pos,
+   const real /*total_inlet_pressure*/,
+   const real /*total_inlet_temperature*/,
+   const dealii::Tensor<1,dim,real> &/*normal_int*/,
+   const std::array<real,nstate> &soln_int,
+   std::array<real,nstate> &soln_bc) const
+{
+
+   // Inflow boundary conditions (both subsonic and supersonic)
+   // Carlson 2011, sec. 2.2 & sec 2.9
+
+    const std::array<real,nstate> primitive_interior_values = convert_conservative_to_primitive_templated<real>(soln_int);
+
+    const real pressure_int   = primitive_interior_values[nstate-1];
+
+    const real density_bc  = pow( gam * mach_inf_sqr * pressure_int, 1.0/gam);
+    std::array<real,nstate> primitive_boundary_values;
+    primitive_boundary_values[0] = density_bc;
+    //Velocity from turbulent boundary layer profile at Re=667,000
+    //From: https://www.mech.kth.se/~pschlatt/DATA/
+    //Incoming BL height
+    real delta_in = 0.024;
+    //Friction Reynolds number
+    real Re_tau = 671.1240;
+    //Friction_velocity
+    real u_tau = Re_tau/delta_in*1.33*pow(10,-5);
+    //Boundary layer edge velocity
+    real u_delta = 23.7719959*u_tau;
+    //compute y_plus
+    real y_plus = (pos[1]-0.22)*Re_tau/delta_in;
+
+    //Compute turbulent BL profile
+    if(y_plus > 3785.966){//Freestream velocity
+        primitive_boundary_values[1] = u_delta/u_delta;
+        for(int idim=1; idim<dim; idim++){
+            primitive_boundary_values[1+idim] = 0.0;
+        }
+    }else{//Inside BL
+        primitive_boundary_values[1] = (compute_U_plus_from_DNS(y_plus)*u_tau)/u_delta;
+        for(int idim=1; idim<dim; idim++){
+            primitive_boundary_values[1+idim] = 0.0;
+        }
+    }
+
+    // //Add flucutatuions at inflow to generate turbulence
+    // std::random_device rd;  
+    // std::mt19937 gen(rd()); 
+    // if(y_plus > 3785.966){//Freestream velocity
+    //     //Do not add fluctuations to freestream
+    // }else{//Inside BL
+    //     primitive_boundary_values[1] = (compute_U_plus_from_DNS(y_plus)*u_tau)/u_delta;
+    //     for(int idim=1; idim<dim; idim++){
+    //         primitive_boundary_values[1+idim] = 0.0;
+    //     }
+    // }
+
+    primitive_boundary_values[nstate-1] = pressure_int;//Simply extrapolate pressure from interior
+    const std::array<real,nstate> conservative_bc = convert_primitive_to_conservative(primitive_boundary_values);
+    for (int istate=0; istate<nstate; ++istate) {
+        soln_bc[istate] = conservative_bc[istate];
+    }
+}
+
+template <int dim, int nspecies, int nstate, typename real>
+real Euler<dim,nspecies,nstate,real>
+::compute_U_plus_from_DNS (
+   const real y_plus) const
+{
+    // Clamp outside range
+    if (y_plus <= y_plus_values.front())
+        return u_plus_values.front();
+
+    if (y_plus >= y_plus_values.back())
+        return u_plus_values.back();
+
+    auto upper =
+        std::lower_bound(y_plus_values.begin(),
+                            y_plus_values.end(),
+                            y_plus);
+
+    const std::size_t i = std::distance(y_plus_values.begin(), upper);
+
+    const real x0 = y_plus_values[i - 1];
+    const real x1 = y_plus_values[i];
+    const real y0 = u_plus_values[i - 1];
+    const real y1 = u_plus_values[i];
+
+    const real t = (y_plus - x0) / (x1 - x0);
+
+    return y0 + t * (y1 - y0);
+}
+
+// template <int dim, int nspecies, int nstate, typename real>
+// real Euler<dim,nspecies,nstate,real>
+// ::compute_fluctuating_RMS_from_DNS (
+//    const real y_plus,
+//     int dim) const
+// {
+//     // Clamp outside range
+//     if (y_plus <= y_plus_values.front())
+//         return u_plus_values.front();
+
+//     if (y_plus >= y_plus_values.back())
+//         return u_plus_values.back();
+
+//     auto upper =
+//         std::lower_bound(y_plus_values.begin(),
+//                             y_plus_values.end(),
+//                             y_plus);
+
+//     const std::size_t i = std::distance(y_plus_values.begin(), upper);
+
+//     const real x0 = y_plus_values[i - 1];
+//     const real x1 = y_plus_values[i];
+//     const real y0 = u_plus_values[i - 1];
+//     const real y1 = u_plus_values[i];
+
+//     const real t = (y_plus - x0) / (x1 - x0);
+
+//     return y0 + t * (y1 - y0);
+// }
+
+
+template <int dim, int nspecies, int nstate, typename real>
+void Euler<dim,nspecies,nstate,real>
 ::boundary_inflow (
    const real total_inlet_pressure,
    const real total_inlet_temperature,
@@ -1528,7 +1655,7 @@ void Euler<dim,nspecies,nstate,real>
     } 
     else if (boundary_type == 1002) {
         // Pressure outflow boundary condition (back pressure)
-        const real back_pressure = 0.99;
+        const real back_pressure = 1.013; //Back presssure for Smooth Ramp WMLES case (https://arc.aiaa.org/doi/epdf/10.2514/6.2024-3697)
         boundary_pressure_outflow (total_inlet_pressure, back_pressure, soln_int, soln_bc);
     } 
     else if (boundary_type == 1003) {
@@ -1558,6 +1685,10 @@ void Euler<dim,nspecies,nstate,real>
     else if (boundary_type == 1009) {
         // Boundary specific to the the astrophysical jet case
         boundary_astrophysical_inflow (soln_bc);
+    }
+    else if (boundary_type == 1010) {
+        // Boundary specific to the the astrophysical jet case
+        boundary_inflow_turbulent_BL (pos, total_inlet_pressure, total_inlet_temperature, normal_int, soln_int, soln_bc);
     }
     else {
         this->pcout << "Invalid boundary_type: " << boundary_type << std::endl;
