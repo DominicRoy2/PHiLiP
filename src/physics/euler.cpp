@@ -1310,7 +1310,7 @@ void Euler<dim,nspecies,nstate,real>
         const real radicant = 1.0+0.5*gamm1*mach_inf_sqr;
         const real pressure_inlet = total_inlet_pressure * pow(radicant, -gam/gamm1);
         const real pressure_bc = (mach_int >= 1) * pressure_int + (1-(mach_int >= 1)) * back_pressure*pressure_inlet;
-        const real temperature_int = compute_temperature<real>(primitive_interior_values);
+        //const real temperature_int = compute_temperature<real>(primitive_interior_values);
 
         // Assign primitive boundary values
         std::array<real,nstate> primitive_boundary_values;
