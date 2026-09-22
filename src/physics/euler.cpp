@@ -1314,7 +1314,7 @@ void Euler<dim,nspecies,nstate,real>
 
         // Assign primitive boundary values
         std::array<real,nstate> primitive_boundary_values;
-        primitive_boundary_values[0] = compute_density_from_pressure_temperature(pressure_bc, temperature_int);
+        primitive_boundary_values[0] = primitive_interior_values[0];//compute_density_from_pressure_temperature(pressure_bc, temperature_int);
         for (int d=0;d<dim;d++) { primitive_boundary_values[1+d] = primitive_interior_values[1+d]; }
         primitive_boundary_values[nstate-1] = pressure_bc;
 
