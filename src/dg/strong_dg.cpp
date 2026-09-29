@@ -2287,10 +2287,6 @@ void DGStrong<dim,nspecies,nstate,real,MeshType>::assemble_boundary_term_strong(
                 current_cell_index, 
                 unit_phys_normal_int,
                 boundary_id);
-        } else if(boundary_id == 1006){
-            for(int istate=0; istate<nstate; istate++){
-                diss_auxi_num_flux_dot_n_at_q[istate] = 0;
-            }
         }
         else {
             diss_auxi_num_flux_dot_n_at_q = diss_num_flux.evaluate_auxiliary_flux(
