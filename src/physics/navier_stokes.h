@@ -60,7 +60,7 @@ public:
     const thermal_boundary_condition_enum thermal_boundary_condition_type;
 
     /// Distance from wall for wall model input velocity
-    const double distance_from_wall_for_wall_model_input_velocity = 0.0022;
+    const double distance_from_wall_for_wall_model_input_velocity = 0.00186672;
 
 protected:    
     ///@{
@@ -394,6 +394,13 @@ public:
         const dealii::types::global_dof_index cell_index,
         const dealii::Tensor<1,dim,real> &normal);
 
+    std::array<real,nstate> dissipative_flux_dot_normal_on_adiabatic_boundary_wall_model (
+        const std::array<real,nstate> &solution,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> &solution_gradient,
+        const std::array<real,nstate> &filtered_solution,
+        const std::array<dealii::Tensor<1,dim,real>,nstate> &filtered_solution_gradient,
+        const dealii::types::global_dof_index cell_index,
+        const dealii::Tensor<1,dim,real> &normal);
     /** Nondimensionalized viscous flux (i.e. dissipative flux)
      *  Reference: Masatsuka 2018 "I do like CFD", p.142, eq.(4.12.1-4.12.4)
      */
@@ -684,7 +691,7 @@ public:
     ~NavierStokes_ChannelFlowConstantSourceTerm_WallModel() {};
 
     /// Distance from wall for wall model input velocity
-    const double distance_from_wall_for_wall_model_input_velocity;
+    const double distance_from_wall_for_wall_model_input_velocity = 0.00186672;
 
     /// Pointer to wall model look-up table object
     std::unique_ptr < WallModelLookUpTable<real> > wall_model_look_up_table;
