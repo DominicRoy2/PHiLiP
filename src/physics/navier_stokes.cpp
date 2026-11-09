@@ -1333,8 +1333,8 @@ std::array<real,nstate> NavierStokes<dim,nspecies,nstate,real>
        at a distance dy = domain_length_y/(number_of_elements_y_direction) from the wall.
     */
 
-    this->pcout<<"dissipative_flux_dot_normal_on_adiabatic_boundary for WMLES."<<std::endl;
-    this->pcout<<"distance_from_wall_for_wall_model_input_velocity: "<<this->distance_from_wall_for_wall_model_input_velocity<<std::endl;
+    // this->pcout<<"dissipative_flux_dot_normal_on_adiabatic_boundary for WMLES."<<std::endl;
+    // this->pcout<<"distance_from_wall_for_wall_model_input_velocity: "<<this->distance_from_wall_for_wall_model_input_velocity<<std::endl;
     // Get the wall parallel velocities; equivalent Frere thesis eq.(2.40)
     const dealii::Tensor<1,dim,real> velocities_parallel_to_wall = this->template compute_velocities_parallel_to_wall<real>(solution,normal);
 
