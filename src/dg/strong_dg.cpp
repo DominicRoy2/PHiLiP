@@ -1610,7 +1610,7 @@ void DGStrong<dim,nspecies,nstate,real,MeshType>::assemble_boundary_term_strong(
         pcout << "ERROR: Invalid iface, opposite_iface is -1. Aborting..."<<std::endl;
         std::abort();
     }
-    std::vector<bool> opposite_face_orientation = {current_cell->face_orientation(opposite_iface), current_cell->face_rotation(opposite_iface), current_cell->face_flip(opposite_iface)};
+    std::vector<bool> opposite_face_orientation = {true,false,false};//{current_cell->face_orientation(opposite_iface), current_cell->face_rotation(opposite_iface), current_cell->face_flip(opposite_iface)};
 
     const auto neighbor_cell = current_cell->neighbor(opposite_iface);
     const unsigned int neighbor_iface = current_cell->neighbor_face_no(opposite_iface);
